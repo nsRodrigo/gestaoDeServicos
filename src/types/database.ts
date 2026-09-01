@@ -2,6 +2,7 @@ export type Status = 'active' | 'inactive'
 export type LoyaltyPeriod = 'monthly' | 'quarterly' | 'semiannual' | 'annual'
 export type UserRole = 'user' | 'admin'
 export type AccountStatus = 'pending' | 'active' | 'blocked'
+export type AppTheme = 'dark' | 'light' | 'a11y'
 
 export interface ServiceRow {
   id: string
@@ -103,6 +104,9 @@ export interface ProfileRow {
   id: string
   name: string | null
   business_name: string | null
+  logo_url: string | null
+  theme: AppTheme
+  onboarding_completed: boolean
   role: UserRole
   account_status: AccountStatus
   created_at: string

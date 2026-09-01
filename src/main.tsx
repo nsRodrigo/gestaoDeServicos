@@ -5,7 +5,9 @@ import { BrowserRouter } from 'react-router-dom'
 import { queryClient } from '@/lib/queryClient'
 import { AuthProvider } from '@/hooks/useAuth'
 import { ActingAsProvider } from '@/hooks/useActingAs'
+import { ThemeProvider } from '@/hooks/useAppTheme'
 import { ToastProvider } from '@/components/ui/Toast'
+import { InstallPromptBanner } from '@/components/InstallPromptBanner'
 import App from './App'
 import './index.css'
 
@@ -16,9 +18,12 @@ createRoot(document.getElementById('root')!).render(
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
             <ActingAsProvider>
-              <ToastProvider>
-                <App />
-              </ToastProvider>
+              <ThemeProvider>
+                <ToastProvider>
+                  <App />
+                  <InstallPromptBanner />
+                </ToastProvider>
+              </ThemeProvider>
             </ActingAsProvider>
           </AuthProvider>
         </QueryClientProvider>

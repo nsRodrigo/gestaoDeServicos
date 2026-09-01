@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { ArrowLeft, Clock } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { Input } from '@/components/ui/Input'
+import { PasswordInput } from '@/components/ui/PasswordInput'
 import { Button } from '@/components/ui/Button'
 
 export default function SignUp() {
@@ -60,9 +61,8 @@ export default function SignUp() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
               />
-              <Input
+              <PasswordInput
                 label="Senha"
-                type="password"
                 autoComplete="new-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}

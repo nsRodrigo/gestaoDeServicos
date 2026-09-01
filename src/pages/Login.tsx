@@ -3,6 +3,7 @@ import { Navigate, Link } from 'react-router-dom'
 import { Scissors } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { Input } from '@/components/ui/Input'
+import { PasswordInput } from '@/components/ui/PasswordInput'
 import { Button } from '@/components/ui/Button'
 
 export default function Login() {
@@ -45,9 +46,8 @@ export default function Login() {
             onChange={(e) => setEmail(e.target.value)}
             required
           />
-          <Input
+          <PasswordInput
             label="Senha"
-            type="password"
             autoComplete="current-password"
             placeholder="••••••••"
             value={password}
@@ -62,7 +62,7 @@ export default function Login() {
               type="checkbox"
               checked={remember}
               onChange={(e) => setRemember(e.target.checked)}
-              className="h-4 w-4 rounded border-border bg-surface accent-[#d4af37]"
+              className="h-4 w-4 rounded border-border bg-surface accent-[rgb(var(--color-gold))]"
             />
             Lembrar-me
           </label>

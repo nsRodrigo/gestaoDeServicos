@@ -1,4 +1,5 @@
-import { ShieldCheck, Clock, Ban, Check, AlertTriangle } from 'lucide-react'
+import { useState } from 'react'
+import { ShieldCheck, Clock, Ban, Check, AlertTriangle, Trash2 } from 'lucide-react'
 import { useAdminAccounts, useAdminAccountMutations } from '@/hooks/useAdmin'
 import { useAuth } from '@/hooks/useAuth'
 import type { AdminAccountRow, AccountStatus } from '@/types/database'
@@ -6,6 +7,7 @@ import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { LoadingState } from '@/components/ui/LoadingState'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { ConfirmationDialog } from '@/components/ui/ConfirmationDialog'
 import { useToast } from '@/components/ui/Toast'
 import { formatDateBR } from '@/lib/format'
 
@@ -18,8 +20,9 @@ const statusBadge: Record<AccountStatus, { label: string; variant: 'gold' | 'suc
 export default function Admin() {
   const { user } = useAuth()
   const { data: accounts, isLoading, isError, error } = useAdminAccounts()
-  const { setStatus } = useAdminAccountMutations()
+  const { setStatus, deleteAccount } = useAdminAccountMutations()
   const toast = useToast()
+  const [accountToDelete, setAccountToDelete] = useState<AdminAccountRow | null>(null)
 
   const pendingCount = accounts?.filter((a) => a.account_status === 'pending').length ?? 0
 
@@ -34,6 +37,17 @@ export default function Admin() {
       toast.success(messages[status])
     } catch {
       toast.error('Não foi possível atualizar a conta.')
+    }
+  }
+
+  async function confirmDelete() {
+    if (!accountToDelete) return
+    try {
+      await deleteAccount.mutateAsync(accountToDelete.id)
+      toast.success('Conta excluída permanentemente.')
+      setAccountToDelete(null)
+    } catch {
+      toast.error('Não foi possível excluir a conta.')
     }
   }
 
@@ -100,6 +114,9 @@ export default function Admin() {
                         <Check className="h-4 w-4" /> Liberar acesso
                       </Button>
                     )}
+                    <Button size="sm" variant="danger" onClick={() => setAccountToDelete(account)}>
+                      <Trash2 className="h-4 w-4" /> Excluir
+                    </Button>
                   </div>
                 )}
               </div>
@@ -107,6 +124,18 @@ export default function Admin() {
           })}
         </div>
       )}
+
+      <ConfirmationDialog
+        open={!!accountToDelete}
+        onOpenChange={(open) => !open && setAccountToDelete(null)}
+        title="Excluir conta"
+        description={`Isso vai apagar permanentemente a conta de "${
+          accountToDelete?.business_name || accountToDelete?.name || accountToDelete?.email
+        }", junto com todos os atendimentos, clientes, serviços e produtos dela. Essa ação não pode ser desfeita.`}
+        confirmLabel="Excluir permanentemente"
+        loading={deleteAccount.isPending}
+        onConfirm={confirmDelete}
+      />
     </div>
   )
 }

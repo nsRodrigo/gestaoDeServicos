@@ -175,7 +175,7 @@ export default function Clients() {
               type="checkbox"
               checked={form.loyaltyEnabled}
               onChange={(e) => setForm({ ...form, loyaltyEnabled: e.target.checked })}
-              className="h-4 w-4 rounded border-border bg-surface accent-[#d4af37]"
+              className="h-4 w-4 rounded border-border bg-surface accent-[rgb(var(--color-gold))]"
             />
             Cliente fidelidade
           </label>

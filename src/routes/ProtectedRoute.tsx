@@ -5,6 +5,7 @@ import { useProfile } from '@/hooks/useProfile'
 import { LoadingState } from '@/components/ui/LoadingState'
 import { Button } from '@/components/ui/Button'
 import { BiometricLockScreen } from '@/components/BiometricLockScreen'
+import { OnboardingScreen } from '@/components/OnboardingScreen'
 
 function StatusScreen({ icon: Icon, title, description }: { icon: typeof Clock; title: string; description: string }) {
   const { signOut } = useAuth()
@@ -60,6 +61,10 @@ export function ProtectedRoute() {
         description="Fale com o administrador do sistema para mais informações."
       />
     )
+  }
+
+  if (profile?.role === 'user' && !profile.onboarding_completed) {
+    return <OnboardingScreen />
   }
 
   return <Outlet />

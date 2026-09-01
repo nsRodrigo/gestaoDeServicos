@@ -1,14 +1,22 @@
 import { useEffect, useState } from 'react'
-import { Download, Fingerprint, LogOut, Save } from 'lucide-react'
+import { Download, Fingerprint, LogOut, Save, Sun, Moon, Contrast } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
-import { useTargetProfile, useProfileMutations, DEFAULT_BUSINESS_NAME } from '@/hooks/useProfile'
+import {
+  useTargetProfile,
+  useProfileMutations,
+  useProfile,
+  useSelfProfileMutations,
+  DEFAULT_BUSINESS_NAME,
+} from '@/hooks/useProfile'
 import { useEffectiveUser } from '@/hooks/useEffectiveUser'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardTitle } from '@/components/ui/Card'
 import { useToast } from '@/components/ui/Toast'
 import { todayISO } from '@/lib/format'
+import { LogoUploader } from '@/components/LogoUploader'
+import type { AppTheme } from '@/types/database'
 import {
   disableBiometric,
   enableBiometric,
@@ -16,10 +24,18 @@ import {
   isBiometricAvailableOnDevice,
 } from '@/lib/biometric'
 
+const themeOptions: { value: AppTheme; label: string; icon: typeof Sun }[] = [
+  { value: 'dark', label: 'Escuro', icon: Moon },
+  { value: 'light', label: 'Claro', icon: Sun },
+  { value: 'a11y', label: 'Alto contraste', icon: Contrast },
+]
+
 export default function Settings() {
   const { displayName, user, signOut } = useAuth()
   const { data: profile } = useTargetProfile()
-  const { updateBusinessName } = useProfileMutations()
+  const { data: ownProfile } = useProfile()
+  const { updateBusinessName, updateLogo } = useProfileMutations()
+  const { updateTheme } = useSelfProfileMutations()
   const { targetUserId } = useEffectiveUser()
   const toast = useToast()
   const [exporting, setExporting] = useState(false)
@@ -66,6 +82,23 @@ export default function Settings() {
       toast.success('Nome da barbearia atualizado.')
     } catch {
       toast.error('Não foi possível salvar o nome da barbearia.')
+    }
+  }
+
+  async function handleLogoUploaded(url: string) {
+    try {
+      await updateLogo.mutateAsync(url)
+      toast.success('Logo atualizada.')
+    } catch {
+      toast.error('Não foi possível salvar a logo.')
+    }
+  }
+
+  async function handleThemeChange(theme: AppTheme) {
+    try {
+      await updateTheme.mutateAsync(theme)
+    } catch {
+      toast.error('Não foi possível salvar o tema.')
     }
   }
 
@@ -135,6 +168,37 @@ export default function Settings() {
           <Button onClick={handleSaveBusinessName} loading={updateBusinessName.isPending}>
             <Save className="h-4 w-4" /> Salvar
           </Button>
+        </div>
+
+        {targetUserId && (
+          <div className="mt-5 border-t border-border pt-5">
+            <LogoUploader userId={targetUserId} logoUrl={profile?.logo_url ?? null} onUploaded={handleLogoUploaded} />
+          </div>
+        )}
+      </Card>
+
+      <Card>
+        <CardTitle>Aparência</CardTitle>
+        <p className="mt-1 text-sm text-muted">Vale só para você, neste aparelho.</p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          {themeOptions.map(({ value, label, icon: Icon }) => {
+            const active = (ownProfile?.theme ?? 'dark') === value
+            return (
+              <button
+                key={value}
+                type="button"
+                onClick={() => handleThemeChange(value)}
+                disabled={updateTheme.isPending}
+                className={`flex items-center gap-2 rounded-lg border px-3.5 py-2.5 text-sm font-medium disabled:opacity-50 ${
+                  active
+                    ? 'border-gold/60 bg-gold/10 text-gold'
+                    : 'border-border bg-surface text-foreground hover:bg-surface-hover'
+                }`}
+              >
+                <Icon className="h-4 w-4" /> {label}
+              </button>
+            )
+          })}
         </div>
       </Card>
 

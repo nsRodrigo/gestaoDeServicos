@@ -3,6 +3,7 @@ import { Home, CalendarClock, Scissors, ShoppingBag, FileBarChart, Settings, Log
 import { useAuth } from '@/hooks/useAuth'
 import { useBusinessName, useProfile } from '@/hooks/useProfile'
 import { useActingAsContext } from '@/hooks/useActingAs'
+import { BusinessLogo } from '@/components/BusinessLogo'
 import { cn } from '@/lib/utils'
 
 const items = [
@@ -33,7 +34,7 @@ export function Sidebar() {
   return (
     <aside className="hidden w-64 shrink-0 flex-col border-r border-border bg-surface md:flex">
       <div className="flex items-center gap-2 px-6 py-6">
-        <Scissors className="h-6 w-6 shrink-0 text-gold" />
+        <BusinessLogo className="h-6 w-6" />
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold leading-tight">{businessName}</p>
           {isAdmin && actingAs && (

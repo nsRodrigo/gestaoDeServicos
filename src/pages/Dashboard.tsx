@@ -1,10 +1,12 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plus, CalendarClock, Scissors } from 'lucide-react'
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 import { useAuth } from '@/hooks/useAuth'
 import { usePeriodSummary } from '@/hooks/useReports'
 import { useAppointmentsByPeriod } from '@/hooks/useAppointments'
+import { useAppTheme } from '@/hooks/useAppTheme'
+import { cssColor } from '@/lib/themeColors'
 import { formatCurrency, formatDateBR, formatTimeBR, formatWeekdayLong, todayISO, isoDateAddDays, appointmentLabel } from '@/lib/format'
 import { Card, CardTitle } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
@@ -16,6 +18,26 @@ export default function Dashboard() {
   const navigate = useNavigate()
   const { displayName } = useAuth()
   const [date, setDate] = useState(todayISO())
+  const theme = useAppTheme()
+  const [chartColors, setChartColors] = useState(() => ({
+    gold: cssColor('--color-gold'),
+    border: cssColor('--color-border'),
+    muted: cssColor('--color-muted'),
+    surface: cssColor('--color-surface'),
+    foreground: cssColor('--color-foreground'),
+  }))
+
+  // A troca de tema só atualiza a variável CSS depois do commit (useLayoutEffect no
+  // ThemeProvider); ler aqui em useEffect garante que já pegamos o valor novo.
+  useEffect(() => {
+    setChartColors({
+      gold: cssColor('--color-gold'),
+      border: cssColor('--color-border'),
+      muted: cssColor('--color-muted'),
+      surface: cssColor('--color-surface'),
+      foreground: cssColor('--color-foreground'),
+    })
+  }, [theme])
 
   const { data: day, isLoading } = usePeriodSummary(date, date)
   const last7Start = isoDateAddDays(date, -6)
@@ -87,18 +109,23 @@ export default function Dashboard() {
                   <AreaChart data={chartData} margin={{ left: -20, top: 10 }}>
                     <defs>
                       <linearGradient id="gold-fill" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#d4af37" stopOpacity={0.4} />
-                        <stop offset="100%" stopColor="#d4af37" stopOpacity={0} />
+                        <stop offset="0%" stopColor={chartColors.gold} stopOpacity={0.4} />
+                        <stop offset="100%" stopColor={chartColors.gold} stopOpacity={0} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#262626" vertical={false} />
-                    <XAxis dataKey="label" stroke="#9a9a9a" fontSize={12} tickLine={false} axisLine={false} />
-                    <YAxis stroke="#9a9a9a" fontSize={12} tickLine={false} axisLine={false} width={60} />
+                    <CartesianGrid strokeDasharray="3 3" stroke={chartColors.border} vertical={false} />
+                    <XAxis dataKey="label" stroke={chartColors.muted} fontSize={12} tickLine={false} axisLine={false} />
+                    <YAxis stroke={chartColors.muted} fontSize={12} tickLine={false} axisLine={false} width={60} />
                     <Tooltip
                       formatter={(v: number) => formatCurrency(v)}
-                      contentStyle={{ background: '#141414', border: '1px solid #262626', borderRadius: 8, color: '#f5f5f5' }}
+                      contentStyle={{
+                        background: chartColors.surface,
+                        border: `1px solid ${chartColors.border}`,
+                        borderRadius: 8,
+                        color: chartColors.foreground,
+                      }}
                     />
-                    <Area type="monotone" dataKey="amount" stroke="#d4af37" fill="url(#gold-fill)" strokeWidth={2} />
+                    <Area type="monotone" dataKey="amount" stroke={chartColors.gold} fill="url(#gold-fill)" strokeWidth={2} />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
@@ -113,12 +140,25 @@ export default function Dashboard() {
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={topServices} layout="vertical" margin={{ left: 10 }}>
                       <XAxis type="number" hide />
-                      <YAxis type="category" dataKey="name" stroke="#9a9a9a" fontSize={12} width={90} tickLine={false} axisLine={false} />
+                      <YAxis
+                        type="category"
+                        dataKey="name"
+                        stroke={chartColors.muted}
+                        fontSize={12}
+                        width={90}
+                        tickLine={false}
+                        axisLine={false}
+                      />
                       <Tooltip
                         formatter={(v: number) => `${v}x`}
-                        contentStyle={{ background: '#141414', border: '1px solid #262626', borderRadius: 8, color: '#f5f5f5' }}
+                        contentStyle={{
+                          background: chartColors.surface,
+                          border: `1px solid ${chartColors.border}`,
+                          borderRadius: 8,
+                          color: chartColors.foreground,
+                        }}
                       />
-                      <Bar dataKey="quantity" fill="#d4af37" radius={[0, 4, 4, 0]} />
+                      <Bar dataKey="quantity" fill={chartColors.gold} radius={[0, 4, 4, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>

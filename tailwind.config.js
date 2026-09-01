@@ -5,19 +5,19 @@ export default {
   theme: {
     extend: {
       colors: {
-        background: '#0a0a0a',
-        surface: '#141414',
-        'surface-hover': '#1c1c1c',
-        border: '#262626',
+        background: 'rgb(var(--color-background) / <alpha-value>)',
+        surface: 'rgb(var(--color-surface) / <alpha-value>)',
+        'surface-hover': 'rgb(var(--color-surface-hover) / <alpha-value>)',
+        border: 'rgb(var(--color-border) / <alpha-value>)',
         gold: {
-          DEFAULT: '#d4af37',
-          light: '#e8cc6a',
-          dark: '#a8862a',
+          DEFAULT: 'rgb(var(--color-gold) / <alpha-value>)',
+          light: 'rgb(var(--color-gold-light) / <alpha-value>)',
+          dark: 'rgb(var(--color-gold-dark) / <alpha-value>)',
         },
-        foreground: '#f5f5f5',
-        muted: '#9a9a9a',
-        success: '#22c55e',
-        danger: '#ef4444',
+        foreground: 'rgb(var(--color-foreground) / <alpha-value>)',
+        muted: 'rgb(var(--color-muted) / <alpha-value>)',
+        success: 'rgb(var(--color-success) / <alpha-value>)',
+        danger: 'rgb(var(--color-danger) / <alpha-value>)',
       },
       fontFamily: {
         sans: ['"Inter"', 'system-ui', 'sans-serif'],

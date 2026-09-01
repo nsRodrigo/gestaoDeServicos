@@ -24,5 +24,13 @@ export function useAdminAccountMutations() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-accounts'] }),
   })
 
-  return { setStatus }
+  const deleteAccount = useMutation({
+    mutationFn: async (userId: string) => {
+      const { error } = await supabase.rpc('fn_admin_delete_account', { p_user_id: userId })
+      if (error) throw error
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-accounts'] }),
+  })
+
+  return { setStatus, deleteAccount }
 }
