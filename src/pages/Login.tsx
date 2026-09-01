@@ -20,7 +20,7 @@ export default function Login() {
     e.preventDefault()
     setError(null)
     setLoading(true)
-    const { error } = await signIn(email, password)
+    const { error } = await signIn(email, password, remember)
     setLoading(false)
     if (error) setError(error)
   }

@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
-import { supabase } from '@/lib/supabase'
+import { supabase, setRememberMe } from '@/lib/supabase'
 import { ACTING_AS_STORAGE_KEY } from '@/hooks/useActingAs'
 import { hasBiometricEnabled, verifyBiometric } from '@/lib/biometric'
 
@@ -10,7 +10,7 @@ interface AuthContextValue {
   loading: boolean
   displayName: string
   locked: boolean
-  signIn: (email: string, password: string) => Promise<{ error: string | null }>
+  signIn: (email: string, password: string, remember?: boolean) => Promise<{ error: string | null }>
   signUp: (email: string, password: string, name: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
   resetPassword: (email: string) => Promise<{ error: string | null }>
@@ -25,21 +25,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [locked, setLocked] = useState(false)
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session)
-      setLoading(false)
-      // Só trava se já existia uma sessão salva ao abrir o app (ex.: reabriu o navegador);
-      // um login com senha feito agora nunca passa por aqui.
-      if (data.session && hasBiometricEnabled(data.session.user.id)) {
-        setLocked(true)
+    let settled = false
+    // Se getSession() nunca resolver nem rejeitar (trava conhecida do supabase-js em alguns
+    // cenários de refresh token inválido/corrompido), isso evita ficar preso para sempre em
+    // "Carregando sessão...".
+    const timeout = setTimeout(() => {
+      if (!settled) {
+        settled = true
+        setLoading(false)
       }
-    })
+    }, 8000)
+
+    supabase.auth
+      .getSession()
+      .then(({ data }) => {
+        if (settled) return
+        settled = true
+        clearTimeout(timeout)
+        setSession(data.session)
+        setLoading(false)
+        // Só trava se já existia uma sessão salva ao abrir o app (ex.: reabriu o navegador);
+        // um login com senha feito agora nunca passa por aqui.
+        if (data.session && hasBiometricEnabled(data.session.user.id)) {
+          setLocked(true)
+        }
+      })
+      .catch(() => {
+        if (settled) return
+        settled = true
+        clearTimeout(timeout)
+        setLoading(false)
+      })
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
       setSession(newSession)
     })
 
-    return () => listener.subscription.unsubscribe()
+    return () => {
+      clearTimeout(timeout)
+      listener.subscription.unsubscribe()
+    }
   }, [])
 
   async function unlockWithBiometric() {
@@ -54,7 +79,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  async function signIn(email: string, password: string) {
+  async function signIn(email: string, password: string, remember = true) {
+    setRememberMe(remember)
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) {
       if (error.message.toLowerCase().includes('invalid login credentials')) {
