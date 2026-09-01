@@ -19,7 +19,7 @@ const emptyForm: ProductInput = { name: '', description: '', price: 0, stockCont
 export default function Products() {
   const { data: products, isLoading } = useProducts()
   const { create, update, setStatus } = useProductMutations()
-  const [viewMode, setViewMode] = useViewMode('products_view_mode')
+  const [viewMode, setViewMode] = useViewMode('products_view_mode', 'list')
   const toast = useToast()
 
   const [modalOpen, setModalOpen] = useState(false)

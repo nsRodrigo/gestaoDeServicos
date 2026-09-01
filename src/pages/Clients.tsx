@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Plus, Pencil, Users, Star, Phone, Mail } from 'lucide-react'
 import { useClients, useClientMutations, type ClientInput } from '@/hooks/useClients'
+import { useViewMode } from '@/hooks/useViewMode'
 import type { ClientRow, LoyaltyPeriod } from '@/types/database'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -9,6 +10,7 @@ import { Modal } from '@/components/ui/Modal'
 import { Badge } from '@/components/ui/Badge'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { LoadingState } from '@/components/ui/LoadingState'
+import { ViewModeToggle } from '@/components/ui/ViewModeToggle'
 import { useToast } from '@/components/ui/Toast'
 
 const emptyForm: ClientInput = {
@@ -30,6 +32,7 @@ const periodOptions: { value: LoyaltyPeriod; label: string }[] = [
 export default function Clients() {
   const { data: clients, isLoading } = useClients()
   const { create, update, setStatus } = useClientMutations()
+  const [viewMode, setViewMode] = useViewMode('clients_view_mode', 'list')
   const toast = useToast()
 
   const [modalOpen, setModalOpen] = useState(false)
@@ -94,11 +97,14 @@ export default function Clients() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <h1 className="hidden text-xl font-semibold md:block">Clientes</h1>
-        <Button onClick={openCreate} className="ml-auto">
-          <Plus className="h-4 w-4" /> Novo cliente
-        </Button>
+        <div className="ml-auto flex items-center gap-2">
+          <ViewModeToggle mode={viewMode} onChange={setViewMode} />
+          <Button onClick={openCreate}>
+            <Plus className="h-4 w-4" /> Novo cliente
+          </Button>
+        </div>
       </div>
 
       {isLoading ? (
@@ -110,6 +116,37 @@ export default function Clients() {
           description="Cadastre clientes para agilizar o registro de atendimentos e ativar a fidelidade."
           action={<Button onClick={openCreate}><Plus className="h-4 w-4" /> Cadastrar cliente</Button>}
         />
+      ) : viewMode === 'list' ? (
+        <div className="flex flex-col divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface">
+          {clients.map((client) => (
+            <div key={client.id} className="flex items-center gap-3 p-3.5">
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="truncate font-medium text-foreground">{client.name}</p>
+                  <Badge variant={client.status === 'active' ? 'success' : 'neutral'}>
+                    {client.status === 'active' ? 'Ativo' : 'Inativo'}
+                  </Badge>
+                  {client.loyalty_enabled && (
+                    <Badge variant="gold">
+                      <Star className="h-3 w-3" /> Fidelidade
+                    </Badge>
+                  )}
+                </div>
+                <p className="truncate text-sm text-muted">
+                  {[client.phone, client.email].filter(Boolean).join(' · ') || '—'}
+                </p>
+              </div>
+              <div className="flex shrink-0 gap-1">
+                <Button size="sm" variant="ghost" onClick={() => openEdit(client)}>
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => toggleStatus(client)}>
+                  {client.status === 'active' ? 'Inativar' : 'Ativar'}
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
       ) : (
         <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
           {clients.map((client) => (

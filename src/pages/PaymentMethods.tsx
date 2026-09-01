@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Plus, Pencil, Wallet, Star } from 'lucide-react'
 import { usePaymentMethods, usePaymentMethodMutations } from '@/hooks/usePaymentMethods'
+import { useViewMode } from '@/hooks/useViewMode'
 import type { PaymentMethodRow } from '@/types/database'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -8,11 +9,13 @@ import { Modal } from '@/components/ui/Modal'
 import { Badge } from '@/components/ui/Badge'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { LoadingState } from '@/components/ui/LoadingState'
+import { ViewModeToggle } from '@/components/ui/ViewModeToggle'
 import { useToast } from '@/components/ui/Toast'
 
 export default function PaymentMethods() {
   const { data: methods, isLoading } = usePaymentMethods()
   const { create, update, setStatus, setDefault } = usePaymentMethodMutations()
+  const [viewMode, setViewMode] = useViewMode('payment_methods_view_mode', 'list')
   const toast = useToast()
 
   const [modalOpen, setModalOpen] = useState(false)
@@ -75,11 +78,14 @@ export default function PaymentMethods() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <h1 className="hidden text-xl font-semibold md:block">Formas de Pagamento</h1>
-        <Button onClick={openCreate} className="ml-auto">
-          <Plus className="h-4 w-4" /> Nova forma de pagamento
-        </Button>
+        <div className="ml-auto flex items-center gap-2">
+          <ViewModeToggle mode={viewMode} onChange={setViewMode} />
+          <Button onClick={openCreate}>
+            <Plus className="h-4 w-4" /> Nova forma de pagamento
+          </Button>
+        </div>
       </div>
 
       {isLoading ? (
@@ -91,6 +97,37 @@ export default function PaymentMethods() {
           description="Ex: Dinheiro, Pix, Cartão de Crédito, Cartão de Débito."
           action={<Button onClick={openCreate}><Plus className="h-4 w-4" /> Cadastrar forma de pagamento</Button>}
         />
+      ) : viewMode === 'list' ? (
+        <div className="flex flex-col divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface">
+          {methods.map((method) => (
+            <div key={method.id} className="flex items-center gap-3 p-3.5">
+              <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+                <p className="truncate font-medium text-foreground">{method.name}</p>
+                <Badge variant={method.status === 'active' ? 'success' : 'neutral'}>
+                  {method.status === 'active' ? 'Ativo' : 'Inativo'}
+                </Badge>
+                {method.is_default && (
+                  <Badge variant="gold">
+                    <Star className="h-3 w-3" /> Padrão
+                  </Badge>
+                )}
+              </div>
+              <div className="flex shrink-0 flex-wrap gap-1">
+                <Button size="sm" variant="ghost" onClick={() => openEdit(method)}>
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                {!method.is_default && method.status === 'active' && (
+                  <Button size="sm" variant="ghost" onClick={() => makeDefault(method)}>
+                    <Star className="h-4 w-4" />
+                  </Button>
+                )}
+                <Button size="sm" variant="ghost" onClick={() => toggleStatus(method)}>
+                  {method.status === 'active' ? 'Inativar' : 'Ativar'}
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
       ) : (
         <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
           {methods.map((method) => (

@@ -19,7 +19,7 @@ const emptyForm: ServiceInput = { name: '', description: '', price: 0 }
 export default function Services() {
   const { data: services, isLoading } = useServices()
   const { create, update, setStatus } = useServiceMutations()
-  const [viewMode, setViewMode] = useViewMode('services_view_mode')
+  const [viewMode, setViewMode] = useViewMode('services_view_mode', 'list')
   const toast = useToast()
 
   const [modalOpen, setModalOpen] = useState(false)
