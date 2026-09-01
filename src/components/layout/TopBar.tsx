@@ -1,0 +1,12 @@
+import { Scissors } from 'lucide-react'
+import { useBusinessName } from '@/hooks/useProfile'
+
+export function TopBar({ title }: { title?: string }) {
+  const businessName = useBusinessName()
+  return (
+    <header className="sticky top-0 z-30 flex items-center gap-2 border-b border-border bg-background/95 px-4 py-3.5 backdrop-blur md:hidden">
+      <Scissors className="h-5 w-5 shrink-0 text-gold" />
+      <span className="truncate text-sm font-semibold">{title ?? businessName}</span>
+    </header>
+  )
+}
