@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, CalendarClock, Scissors, ShoppingBag } from 'lucide-react'
+import { Plus, CalendarClock, Scissors } from 'lucide-react'
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 import { useAuth } from '@/hooks/useAuth'
 import { usePeriodSummary } from '@/hooks/useReports'
@@ -13,11 +13,13 @@ import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { LoadingState } from '@/components/ui/LoadingState'
+import { NewEntryModal } from '@/components/NewEntryModal'
 
 export default function Dashboard() {
   const navigate = useNavigate()
   const { displayName } = useAuth()
   const [date, setDate] = useState(todayISO())
+  const [newEntryOpen, setNewEntryOpen] = useState(false)
   const theme = useAppTheme()
   const [chartColors, setChartColors] = useState(() => ({
     gold: cssColor('--color-gold'),
@@ -68,11 +70,8 @@ export default function Dashboard() {
         </div>
         <div className="flex items-center gap-3">
           <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-auto" />
-          <Button onClick={() => navigate('/atendimentos/novo')} className="hidden md:inline-flex">
-            <Plus className="h-4 w-4" /> Novo atendimento
-          </Button>
-          <Button variant="secondary" onClick={() => navigate('/vendas/novo')} className="hidden md:inline-flex">
-            <ShoppingBag className="h-4 w-4" /> Nova venda
+          <Button onClick={() => setNewEntryOpen(true)} className="hidden md:inline-flex">
+            <Plus className="h-4 w-4" /> Novo
           </Button>
         </div>
       </div>
@@ -176,14 +175,9 @@ export default function Dashboard() {
                 icon={CalendarClock}
                 title="Você ainda não possui atendimentos hoje."
                 action={
-                  <div className="flex flex-wrap justify-center gap-2">
-                    <Button onClick={() => navigate('/atendimentos/novo')}>
-                      <Plus className="h-4 w-4" /> Registrar primeiro atendimento
-                    </Button>
-                    <Button variant="secondary" onClick={() => navigate('/vendas/novo')}>
-                      <ShoppingBag className="h-4 w-4" /> Nova venda
-                    </Button>
-                  </div>
+                  <Button onClick={() => setNewEntryOpen(true)}>
+                    <Plus className="h-4 w-4" /> Registrar primeiro atendimento
+                  </Button>
                 }
               />
             ) : (
@@ -212,6 +206,7 @@ export default function Dashboard() {
           </div>
         </>
       )}
+      <NewEntryModal open={newEntryOpen} onOpenChange={setNewEntryOpen} />
     </div>
   )
 }

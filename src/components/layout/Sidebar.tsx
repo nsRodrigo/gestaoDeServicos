@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import { Home, CalendarClock, Scissors, ShoppingBag, FileBarChart, Settings, LogOut, Plus, Users, Wallet, ShieldCheck, Building2 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
@@ -5,6 +6,8 @@ import { useBusinessName, useProfile } from '@/hooks/useProfile'
 import { useActingAsContext } from '@/hooks/useActingAs'
 import { BusinessLogo } from '@/components/BusinessLogo'
 import { NotificationBell } from '@/components/NotificationBell'
+import { NewEntryModal } from '@/components/NewEntryModal'
+import { AppVersionBadge } from '@/components/AppVersionBadge'
 import { cn } from '@/lib/utils'
 
 const items = [
@@ -19,6 +22,7 @@ const items = [
 ]
 
 export function Sidebar() {
+  const [newEntryOpen, setNewEntryOpen] = useState(false)
   const { displayName, signOut } = useAuth()
   const businessName = useBusinessName()
   const { data: profile } = useProfile()
@@ -45,18 +49,15 @@ export function Sidebar() {
         <NotificationBell />
       </div>
 
-      <div className="flex flex-col gap-2 px-4">
-        <NavLink to="/atendimentos/novo">
-          <button className="flex w-full items-center justify-center gap-2 rounded-lg bg-gold px-4 py-3 text-sm font-semibold text-black hover:bg-gold-light">
-            <Plus className="h-4 w-4" /> Novo atendimento
-          </button>
-        </NavLink>
-        <NavLink to="/vendas/novo">
-          <button className="flex w-full items-center justify-center gap-2 rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground hover:bg-surface-hover">
-            <ShoppingBag className="h-4 w-4" /> Nova venda
-          </button>
-        </NavLink>
+      <div className="px-4">
+        <button
+          onClick={() => setNewEntryOpen(true)}
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-gold px-4 py-3 text-sm font-semibold text-black hover:bg-gold-light"
+        >
+          <Plus className="h-4 w-4" /> Novo
+        </button>
       </div>
+      <NewEntryModal open={newEntryOpen} onOpenChange={setNewEntryOpen} />
 
       <nav className="mt-6 flex-1 space-y-1 px-3">
         {navItems.map(({ to, label, icon: Icon, end }) => (
@@ -93,6 +94,7 @@ export function Sidebar() {
         >
           <LogOut className="h-4 w-4" /> Sair
         </button>
+        <AppVersionBadge className="mt-3 block px-1" />
       </div>
     </aside>
   )

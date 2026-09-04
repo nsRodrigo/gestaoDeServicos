@@ -4,6 +4,7 @@ import { ArrowLeft, MailCheck } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
+import { AppVersionBadge } from '@/components/AppVersionBadge'
 
 export default function ForgotPassword() {
   const { resetPassword } = useAuth()
@@ -59,6 +60,7 @@ export default function ForgotPassword() {
           </>
         )}
       </div>
+      <AppVersionBadge className="fixed bottom-3 right-3" />
     </div>
   )
 }

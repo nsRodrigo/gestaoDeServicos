@@ -11,9 +11,11 @@ import { Input, Textarea } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { Combobox, type ComboboxOption } from '@/components/ui/Combobox'
 import { Select } from '@/components/ui/Select'
+import { ConfirmationDialog } from '@/components/ui/ConfirmationDialog'
 import { useToast } from '@/components/ui/Toast'
 import { formatCurrency, todayISO, nowTimeHHMM } from '@/lib/format'
 import { CartEditor, type CartItem } from '@/components/appointments/CartEditor'
+import { cn } from '@/lib/utils'
 
 interface AppointmentFormProps {
   mode: 'create' | 'edit'
@@ -45,11 +47,14 @@ export default function AppointmentForm({ mode, appointmentId, initialData }: Ap
   const { data: clients } = useActiveClients()
   const { data: paymentMethods } = useActivePaymentMethods()
   const { data: nextNumber } = useNextAppointmentNumber()
-  const { create, update } = useAppointmentMutations()
+  const { create, update, cancel } = useAppointmentMutations()
 
   // Tipo é decidido na criação (NewAppointment vs NewSale) e é imutável depois — ao editar, só
   // olhamos o que já está salvo pra saber se escondemos serviço/data/hora.
   const isSale = mode === 'edit' && initialData?.type === 'venda'
+  // Um atendimento agendado (data futura, ainda não concluído) ganha os botões de
+  // concluir/cancelar em vez do "Salvar" único.
+  const isScheduled = mode === 'edit' && initialData?.type === 'atendimento' && initialData?.status === 'agendado'
 
   const [clientId, setClientId] = useState<string | null>(initialData?.client_id ?? null)
   const [clientName, setClientName] = useState(initialData?.client_name ?? '')
@@ -81,6 +86,8 @@ export default function AppointmentForm({ mode, appointmentId, initialData }: Ap
     })) ?? [],
   )
   const [formError, setFormError] = useState<string | null>(null)
+  const [pendingAction, setPendingAction] = useState<'save' | 'conclude' | null>(null)
+  const [cancelling, setCancelling] = useState(false)
 
   const selectedClient = clients?.find((c) => c.id === clientId) ?? null
 
@@ -89,6 +96,9 @@ export default function AppointmentForm({ mode, appointmentId, initialData }: Ap
   const grandTotal = servicesTotal + productsTotal
 
   const saving = create.isPending || update.isPending
+  // Ao criar um novo atendimento, escolher uma data/hora futura já muda o rótulo do botão
+  // pra "Agendar" antes mesmo de salvar — não é uma opção à parte, é automático pela data.
+  const willSchedule = mode === 'create' && !isSale && new Date(`${date}T${time}`) > new Date()
 
   // Pré-seleciona a forma de pagamento padrão (definida em Formas de Pagamento) ou, na falta
   // dela, qualquer uma chamada "Débito" — só quando o barbeiro ainda não escolheu nenhuma.
@@ -121,7 +131,16 @@ export default function AppointmentForm({ mode, appointmentId, initialData }: Ap
     alerts.forEach((n) => toast.show(n.title, { variant: 'warning', description: n.message }))
   }
 
-  async function handleSave() {
+  function showLoyaltyToast(loyalty: { client_name: string; visits: number; period: string } | null) {
+    if (!loyalty) return
+    const periodLabel = loyaltyPeriodLabels[loyalty.period] ?? loyalty.period
+    toast.show('Cliente fidelidade!', {
+      variant: 'success',
+      description: `${loyalty.client_name} completou ${loyalty.visits} visitas neste ${periodLabel}.`,
+    })
+  }
+
+  async function handleSave(conclude = false) {
     setFormError(null)
     if (!isSale && cartServices.length === 0) {
       setFormError('Informe pelo menos um serviço.')
@@ -149,27 +168,38 @@ export default function AppointmentForm({ mode, appointmentId, initialData }: Ap
       products: cartProducts.map((p) => ({ id: p.id, quantity: p.quantity, lineId: p.lineId, customPrice: p.customPrice })),
     }
 
+    setPendingAction(conclude ? 'conclude' : 'save')
     try {
       if (mode === 'create') {
         const result = await create.mutateAsync(input)
-        toast.success('Atendimento salvo com sucesso!')
-        if (result.loyalty) {
-          const periodLabel = loyaltyPeriodLabels[result.loyalty.period] ?? result.loyalty.period
-          toast.show('Cliente fidelidade!', {
-            variant: 'success',
-            description: `${result.loyalty.client_name} completou ${result.loyalty.visits} visitas neste ${periodLabel}.`,
-          })
-        }
+        toast.success(willSchedule ? 'Atendimento agendado com sucesso!' : 'Atendimento salvo com sucesso!')
+        showLoyaltyToast(result.loyalty)
         showLowStockToasts(result.low_stock)
         navigate('/')
       } else if (appointmentId) {
-        const result = await update.mutateAsync({ id: appointmentId, input })
-        toast.success('Atendimento atualizado com sucesso!')
+        const result = await update.mutateAsync({ id: appointmentId, input, conclude })
+        toast.success(conclude ? 'Atendimento concluído com sucesso!' : 'Atendimento atualizado com sucesso!')
+        showLoyaltyToast(result.loyalty)
         showLowStockToasts(result.low_stock)
         navigate('/atendimentos')
       }
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Não foi possível salvar o atendimento.')
+    } finally {
+      setPendingAction(null)
+    }
+  }
+
+  async function confirmCancel() {
+    if (!appointmentId) return
+    try {
+      await cancel.mutateAsync(appointmentId)
+      toast.success('Atendimento cancelado.')
+      navigate('/atendimentos')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Não foi possível cancelar o atendimento.')
+    } finally {
+      setCancelling(false)
     }
   }
 
@@ -195,13 +225,13 @@ export default function AppointmentForm({ mode, appointmentId, initialData }: Ap
           options={clientOptions}
           emptyText="Nenhum cliente cadastrado ainda. Digite um nome pra usar mesmo assim."
         />
-        {!isSale && (
-          <div className="grid grid-cols-3 gap-4">
-            <Input label="Data" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-            <Input label="Horário" type="time" value={time} onChange={(e) => setTime(e.target.value)} />
+        <div className={cn('grid gap-4', isSale ? 'grid-cols-2' : 'grid-cols-3')}>
+          <Input label="Data" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+          <Input label="Horário" type="time" value={time} onChange={(e) => setTime(e.target.value)} />
+          {!isSale && (
             <Select label="Duração" value={durationMinutes} onChange={setDurationMinutes} options={durationOptions} />
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {selectedClient?.email && (
@@ -282,12 +312,45 @@ export default function AppointmentForm({ mode, appointmentId, initialData }: Ap
             <span className="text-base font-semibold">
               Total: <span className="text-gold">{formatCurrency(grandTotal)}</span>
             </span>
-            <Button size="lg" className="ml-4 md:ml-0" onClick={handleSave} loading={saving} disabled={!canSave}>
-              Salvar atendimento
-            </Button>
+            <div className="ml-4 flex flex-wrap items-center justify-end gap-2 md:ml-0">
+              {isScheduled && (
+                <Button variant="ghost" className="text-danger" onClick={() => setCancelling(true)} disabled={saving}>
+                  Cancelar atendimento
+                </Button>
+              )}
+              <Button
+                size="lg"
+                variant={isScheduled ? 'secondary' : 'primary'}
+                onClick={() => handleSave(false)}
+                loading={pendingAction === 'save' && update.isPending}
+                disabled={!canSave || (saving && pendingAction !== 'save')}
+              >
+                {isScheduled ? 'Salvar alterações' : willSchedule ? 'Agendar' : 'Salvar'}
+              </Button>
+              {isScheduled && (
+                <Button
+                  size="lg"
+                  onClick={() => handleSave(true)}
+                  loading={pendingAction === 'conclude' && update.isPending}
+                  disabled={!canSave || (saving && pendingAction !== 'conclude')}
+                >
+                  Concluir atendimento
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </div>
+
+      <ConfirmationDialog
+        open={cancelling}
+        onOpenChange={setCancelling}
+        title="Cancelar atendimento?"
+        description="O cliente ainda não foi cobrado e nada foi descontado do estoque. Essa ação não pode ser desfeita."
+        confirmLabel="Cancelar atendimento"
+        loading={cancel.isPending}
+        onConfirm={confirmCancel}
+      />
     </div>
   )
 }

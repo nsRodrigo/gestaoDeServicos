@@ -2,9 +2,9 @@ import { Link } from 'react-router-dom'
 import { Scissors, ShoppingBag, Settings, LogOut, ChevronRight, Users, Wallet, ShieldCheck, Building2, Bell } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useProfile } from '@/hooks/useProfile'
+import { AppVersionBadge } from '@/components/AppVersionBadge'
 
 const items = [
-  { to: '/vendas/novo', label: 'Nova venda', icon: ShoppingBag },
   { to: '/clientes', label: 'Clientes', icon: Users },
   { to: '/tipos-de-corte', label: 'Tipos de Corte', icon: Scissors },
   { to: '/produtos-extras', label: 'Produtos / Extras', icon: ShoppingBag },
@@ -57,6 +57,7 @@ export default function More() {
       >
         <LogOut className="h-4 w-4" /> Sair
       </button>
+      <AppVersionBadge className="text-center" />
     </div>
   )
 }

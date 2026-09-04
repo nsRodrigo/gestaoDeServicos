@@ -5,7 +5,7 @@ import { useActiveProducts } from '@/hooks/useProducts'
 import { useActiveClients } from '@/hooks/useClients'
 import { useActivePaymentMethods } from '@/hooks/usePaymentMethods'
 import { useAppointmentMutations, type AppointmentFormInput } from '@/hooks/useAppointments'
-import { Textarea } from '@/components/ui/Input'
+import { Input, Textarea } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { Combobox, type ComboboxOption } from '@/components/ui/Combobox'
 import { Select } from '@/components/ui/Select'
@@ -30,6 +30,8 @@ export default function SaleForm() {
 
   const [clientId, setClientId] = useState<string | null>(null)
   const [clientName, setClientName] = useState('')
+  const [date, setDate] = useState(todayISO())
+  const [time, setTime] = useState(nowTimeHHMM())
   const [paymentMethodId, setPaymentMethodId] = useState<string | null>(null)
   const [notes, setNotes] = useState('')
   const [cartProducts, setCartProducts] = useState<CartItem[]>([])
@@ -82,8 +84,8 @@ export default function SaleForm() {
       clientName,
       paymentMethodId,
       notes,
-      date: todayISO(),
-      time: `${nowTimeHHMM()}:00`,
+      date,
+      time: `${time}:00`,
       durationMinutes: 0,
       services: [],
       products: cartProducts.map((p) => ({ id: p.id, quantity: p.quantity, lineId: p.lineId, customPrice: p.customPrice })),
@@ -101,16 +103,22 @@ export default function SaleForm() {
 
   return (
     <div className="flex flex-col gap-6 pb-32 md:pb-6">
-      <Combobox
-        label="Cliente (opcional)"
-        placeholder="Nome do cliente"
-        value={clientName}
-        onSelect={handleClientSelect}
-        onClear={clearClient}
-        allowFreeText
-        options={clientOptions}
-        emptyText="Nenhum cliente cadastrado ainda. Digite um nome pra usar mesmo assim."
-      />
+      <div className="grid gap-4 md:grid-cols-2">
+        <Combobox
+          label="Cliente (opcional)"
+          placeholder="Nome do cliente"
+          value={clientName}
+          onSelect={handleClientSelect}
+          onClear={clearClient}
+          allowFreeText
+          options={clientOptions}
+          emptyText="Nenhum cliente cadastrado ainda. Digite um nome pra usar mesmo assim."
+        />
+        <div className="grid grid-cols-2 gap-4">
+          <Input label="Data" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+          <Input label="Horário" type="time" value={time} onChange={(e) => setTime(e.target.value)} />
+        </div>
+      </div>
 
       <CartEditor
         items={cartProducts}

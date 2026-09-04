@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Eye, Pencil, Trash2, CalendarClock, Plus, ShoppingBag } from 'lucide-react'
+import { Eye, Pencil, Trash2, Ban, CalendarClock, Plus } from 'lucide-react'
 import { useAppointmentsByPeriod, useAppointmentMutations } from '@/hooks/useAppointments'
 import { resolvePeriod, type PeriodPreset } from '@/lib/periods'
 import { formatCurrency, formatDateBR, formatTimeBR, todayISO, appointmentLabel } from '@/lib/format'
@@ -10,6 +10,7 @@ import { LoadingState } from '@/components/ui/LoadingState'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
+import { NewEntryModal } from '@/components/NewEntryModal'
 import { ConfirmationDialog } from '@/components/ui/ConfirmationDialog'
 import { TableContainer, Table, Thead, Th, Tr, Td } from '@/components/ui/Table'
 import { Badge } from '@/components/ui/Badge'
@@ -21,6 +22,21 @@ function TypeBadge({ appt }: { appt: AppointmentWithItems }) {
   ) : (
     <Badge variant="neutral">Atendimento</Badge>
   )
+}
+
+function StatusBadge({ appt }: { appt: AppointmentWithItems }) {
+  if (appt.type !== 'atendimento') return null
+  if (appt.status === 'agendado') return <Badge variant="neutral">Agendado</Badge>
+  if (appt.status === 'cancelado') return <Badge variant="danger">Cancelado</Badge>
+  return <Badge variant="success">Concluído</Badge>
+}
+
+function canEdit(appt: AppointmentWithItems) {
+  return !(appt.type === 'atendimento' && appt.status === 'cancelado')
+}
+
+function canCancel(appt: AppointmentWithItems) {
+  return appt.type === 'atendimento' && appt.status === 'agendado'
 }
 
 function itemsSummary(appt: AppointmentWithItems) {
@@ -38,10 +54,12 @@ export default function AppointmentsList() {
   const { start, end } = resolvePeriod(preset, customStart, customEnd)
 
   const { data: appointments, isLoading } = useAppointmentsByPeriod(start, end)
-  const { remove } = useAppointmentMutations()
+  const { remove, cancel } = useAppointmentMutations()
 
   const [viewing, setViewing] = useState<AppointmentWithItems | null>(null)
   const [deleting, setDeleting] = useState<AppointmentWithItems | null>(null)
+  const [cancellingAppt, setCancellingAppt] = useState<AppointmentWithItems | null>(null)
+  const [newEntryOpen, setNewEntryOpen] = useState(false)
 
   async function confirmDelete() {
     if (!deleting) return
@@ -51,6 +69,17 @@ export default function AppointmentsList() {
       setDeleting(null)
     } catch {
       toast.error('Não foi possível excluir o atendimento.')
+    }
+  }
+
+  async function confirmCancel() {
+    if (!cancellingAppt) return
+    try {
+      await cancel.mutateAsync(cancellingAppt.id)
+      toast.success('Atendimento cancelado.')
+      setCancellingAppt(null)
+    } catch {
+      toast.error('Não foi possível cancelar o atendimento.')
     }
   }
 
@@ -75,14 +104,9 @@ export default function AppointmentsList() {
           title="Nenhum atendimento neste período."
           description="Registre um novo atendimento para começar."
           action={
-            <div className="flex flex-wrap justify-center gap-2">
-              <Button onClick={() => navigate('/atendimentos/novo')}>
-                <Plus className="h-4 w-4" /> Registrar atendimento
-              </Button>
-              <Button variant="secondary" onClick={() => navigate('/vendas/novo')}>
-                <ShoppingBag className="h-4 w-4" /> Nova venda
-              </Button>
-            </div>
+            <Button onClick={() => setNewEntryOpen(true)}>
+              <Plus className="h-4 w-4" /> Registrar atendimento
+            </Button>
           }
         />
       ) : (
@@ -101,6 +125,7 @@ export default function AppointmentsList() {
                           {appt.type === 'atendimento' && ` · ${appt.duration_minutes} min`} · {appointmentLabel(appt)}
                         </p>
                         <TypeBadge appt={appt} />
+                        <StatusBadge appt={appt} />
                       </div>
                       <p className="mt-1 truncate text-sm text-muted">{services}</p>
                       {products && <p className="truncate text-xs text-muted">{products}</p>}
@@ -114,9 +139,16 @@ export default function AppointmentsList() {
                     <Button size="sm" variant="ghost" onClick={() => setViewing(appt)}>
                       <Eye className="h-4 w-4" /> Ver
                     </Button>
-                    <Button size="sm" variant="ghost" onClick={() => navigate(`/atendimentos/${appt.id}/editar`)}>
-                      <Pencil className="h-4 w-4" /> Editar
-                    </Button>
+                    {canEdit(appt) && (
+                      <Button size="sm" variant="ghost" onClick={() => navigate(`/atendimentos/${appt.id}/editar`)}>
+                        <Pencil className="h-4 w-4" /> Editar
+                      </Button>
+                    )}
+                    {canCancel(appt) && (
+                      <Button size="sm" variant="ghost" className="text-danger" onClick={() => setCancellingAppt(appt)}>
+                        <Ban className="h-4 w-4" /> Cancelar
+                      </Button>
+                    )}
                     <Button size="sm" variant="ghost" className="ml-auto text-danger" onClick={() => setDeleting(appt)}>
                       <Trash2 className="h-4 w-4" /> Excluir
                     </Button>
@@ -134,6 +166,7 @@ export default function AppointmentsList() {
                   <Th>Data</Th>
                   <Th>Horário</Th>
                   <Th>Tipo</Th>
+                  <Th>Status</Th>
                   <Th>Cliente</Th>
                   <Th>Serviços</Th>
                   <Th>Extras</Th>
@@ -150,6 +183,7 @@ export default function AppointmentsList() {
                       <Td>{formatDateBR(appt.appointment_date)}</Td>
                       <Td>{formatTimeBR(appt.appointment_time)}{appt.type === 'atendimento' && ` · ${appt.duration_minutes} min`}</Td>
                       <Td><TypeBadge appt={appt} /></Td>
+                      <Td><StatusBadge appt={appt} /></Td>
                       <Td>{appointmentLabel(appt)}</Td>
                       <Td className="max-w-[220px] truncate">{services}</Td>
                       <Td className="max-w-[180px] truncate">{products || '—'}</Td>
@@ -160,9 +194,16 @@ export default function AppointmentsList() {
                           <button onClick={() => setViewing(appt)} className="rounded p-1.5 text-muted hover:bg-surface-hover hover:text-foreground" aria-label="Ver">
                             <Eye className="h-4 w-4" />
                           </button>
-                          <button onClick={() => navigate(`/atendimentos/${appt.id}/editar`)} className="rounded p-1.5 text-muted hover:bg-surface-hover hover:text-foreground" aria-label="Editar">
-                            <Pencil className="h-4 w-4" />
-                          </button>
+                          {canEdit(appt) && (
+                            <button onClick={() => navigate(`/atendimentos/${appt.id}/editar`)} className="rounded p-1.5 text-muted hover:bg-surface-hover hover:text-foreground" aria-label="Editar">
+                              <Pencil className="h-4 w-4" />
+                            </button>
+                          )}
+                          {canCancel(appt) && (
+                            <button onClick={() => setCancellingAppt(appt)} className="rounded p-1.5 text-muted hover:bg-danger/10 hover:text-danger" aria-label="Cancelar">
+                              <Ban className="h-4 w-4" />
+                            </button>
+                          )}
                           <button onClick={() => setDeleting(appt)} className="rounded p-1.5 text-muted hover:bg-danger/10 hover:text-danger" aria-label="Excluir">
                             <Trash2 className="h-4 w-4" />
                           </button>
@@ -186,7 +227,7 @@ export default function AppointmentsList() {
                 {viewing.type === 'atendimento' && ` · ${viewing.duration_minutes} min`}
               </span>
               <span className="flex items-center gap-2">
-                {appointmentLabel(viewing)} <TypeBadge appt={viewing} />
+                {appointmentLabel(viewing)} <TypeBadge appt={viewing} /> <StatusBadge appt={viewing} />
               </span>
             </div>
             {viewing.type === 'atendimento' && (
@@ -235,11 +276,27 @@ export default function AppointmentsList() {
         open={!!deleting}
         onOpenChange={(o) => !o && setDeleting(null)}
         title="Excluir atendimento?"
-        description="Essa ação não pode ser desfeita. O estoque de produtos utilizados será restaurado."
+        description={
+          deleting?.status === 'agendado'
+            ? 'Essa ação não pode ser desfeita.'
+            : 'Essa ação não pode ser desfeita. O estoque de produtos utilizados será restaurado.'
+        }
         confirmLabel="Excluir"
         loading={remove.isPending}
         onConfirm={confirmDelete}
       />
+
+      <ConfirmationDialog
+        open={!!cancellingAppt}
+        onOpenChange={(o) => !o && setCancellingAppt(null)}
+        title="Cancelar atendimento?"
+        description="O cliente ainda não foi cobrado e o estoque não foi alterado. Essa ação não pode ser desfeita."
+        confirmLabel="Cancelar atendimento"
+        loading={cancel.isPending}
+        onConfirm={confirmCancel}
+      />
+
+      <NewEntryModal open={newEntryOpen} onOpenChange={setNewEntryOpen} />
     </div>
   )
 }

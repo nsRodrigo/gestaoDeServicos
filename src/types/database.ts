@@ -4,6 +4,7 @@ export type UserRole = 'user' | 'admin'
 export type AccountStatus = 'pending' | 'active' | 'blocked'
 export type AppTheme = 'dark' | 'light' | 'a11y'
 export type AppointmentKind = 'atendimento' | 'venda'
+export type AppointmentStatus = 'agendado' | 'concluido' | 'cancelado'
 
 export interface ServiceRow {
   id: string
@@ -58,6 +59,7 @@ export interface AppointmentRow {
   id: string
   user_id: string
   type: AppointmentKind
+  status: AppointmentStatus
   client_id: string | null
   client_name: string | null
   notes: string | null
@@ -95,6 +97,7 @@ export interface AppointmentProductRow {
   custom_price: number | null
   quantity: number
   subtotal: number
+  stock_deducted: boolean
   created_at: string
 }
 

@@ -34,6 +34,7 @@ export interface CreateAppointmentResult {
 
 export interface UpdateAppointmentResult {
   low_stock: LowStockAlert[]
+  loyalty: LoyaltyAlert | null
 }
 
 const APPOINTMENT_SELECT = '*, appointment_services(*), appointment_products(*)'
@@ -106,6 +107,11 @@ function friendlyError(message: string) {
   if (message.includes('Cliente inválido')) return 'Cliente inválido.'
   if (message.includes('Forma de pagamento inválida')) return 'Forma de pagamento inválida.'
   if (message.includes('Já existe um atendimento nesse horário')) return message
+  if (message.includes('já foi concluído ou cancelado')) return message
+  if (message.includes('não está mais agendado')) return message
+  if (message.includes('podem ser concluídos')) return message
+  if (message.includes('podem ser cancelados')) return message
+  if (message.includes('Atendimento não encontrado')) return 'Atendimento não encontrado.'
   return 'Não foi possível salvar o atendimento.'
 }
 
@@ -145,7 +151,7 @@ export function useAppointmentMutations() {
   })
 
   const update = useMutation({
-    mutationFn: async ({ id, input }: { id: string; input: AppointmentFormInput }) => {
+    mutationFn: async ({ id, input, conclude }: { id: string; input: AppointmentFormInput; conclude?: boolean }) => {
       const { data, error } = await supabase.rpc('fn_update_appointment', {
         p_appointment_id: id,
         p_client_id: input.clientId,
@@ -158,6 +164,7 @@ export function useAppointmentMutations() {
         p_products: input.products.map((p) => lineToJson(p, 'product_id')),
         p_target_user_id: targetUserId,
         p_duration_minutes: input.durationMinutes,
+        p_conclude: conclude ?? false,
       })
       if (error) throw new Error(friendlyError(error.message))
       return data as unknown as UpdateAppointmentResult
@@ -173,5 +180,16 @@ export function useAppointmentMutations() {
     onSuccess: invalidateAll,
   })
 
-  return { create, update, remove }
+  const cancel = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.rpc('fn_cancel_appointment', {
+        p_appointment_id: id,
+        p_target_user_id: targetUserId,
+      })
+      if (error) throw new Error(friendlyError(error.message))
+    },
+    onSuccess: invalidateAll,
+  })
+
+  return { create, update, remove, cancel }
 }

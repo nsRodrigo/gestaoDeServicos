@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/Input'
 import { PasswordInput } from '@/components/ui/PasswordInput'
 import { Button } from '@/components/ui/Button'
 import { GoogleIcon } from '@/components/ui/GoogleIcon'
+import { AppVersionBadge } from '@/components/AppVersionBadge'
 
 export default function SignUp() {
   const { signUp, signInWithGoogle } = useAuth()
@@ -106,6 +107,7 @@ export default function SignUp() {
           </>
         )}
       </div>
+      <AppVersionBadge className="fixed bottom-3 right-3" />
     </div>
   )
 }
