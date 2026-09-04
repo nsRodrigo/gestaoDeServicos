@@ -10,12 +10,14 @@ const titles: Record<string, string> = {
   '/': 'Dashboard',
   '/atendimentos': 'Atendimentos',
   '/atendimentos/novo': 'Novo atendimento',
+  '/vendas/novo': 'Nova venda',
   '/tipos-de-corte': 'Tipos de Corte',
   '/produtos-extras': 'Produtos / Extras',
   '/clientes': 'Clientes',
   '/formas-pagamento': 'Formas de Pagamento',
   '/relatorios': 'Relatórios',
   '/configuracoes': 'Configurações',
+  '/notificacoes': 'Notificações',
   '/mais': 'Mais',
 }
 

@@ -52,8 +52,8 @@ export function useProductMutations() {
         description: input.description || null,
         price: input.price,
         stock_control: input.stockControl,
-        stock_quantity: input.stockControl ? input.stockQuantity : 0,
-        minimum_stock: input.stockControl ? input.minimumStock : 0,
+        stock_quantity: input.stockQuantity,
+        minimum_stock: input.minimumStock,
         status: 'active',
       })
       if (error) throw error
@@ -70,8 +70,8 @@ export function useProductMutations() {
           description: input.description || null,
           price: input.price,
           stock_control: input.stockControl,
-          stock_quantity: input.stockControl ? input.stockQuantity : 0,
-          minimum_stock: input.stockControl ? input.minimumStock : 0,
+          stock_quantity: input.stockQuantity,
+          minimum_stock: input.minimumStock,
         })
         .eq('id', id)
       if (error) throw error

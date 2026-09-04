@@ -5,15 +5,17 @@ import { useAuth } from '@/hooks/useAuth'
 import { Input } from '@/components/ui/Input'
 import { PasswordInput } from '@/components/ui/PasswordInput'
 import { Button } from '@/components/ui/Button'
+import { GoogleIcon } from '@/components/ui/GoogleIcon'
 
 export default function SignUp() {
-  const { signUp } = useAuth()
+  const { signUp, signInWithGoogle } = useAuth()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [sent, setSent] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [googleLoading, setGoogleLoading] = useState(false)
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -27,6 +29,16 @@ export default function SignUp() {
     setLoading(false)
     if (error) setError(error)
     else setSent(true)
+  }
+
+  async function handleGoogle() {
+    setError(null)
+    setGoogleLoading(true)
+    const { error } = await signInWithGoogle()
+    if (error) {
+      setGoogleLoading(false)
+      setError(error)
+    }
   }
 
   return (
@@ -73,6 +85,24 @@ export default function SignUp() {
                 Solicitar acesso
               </Button>
             </form>
+
+            <div className="my-6 flex items-center gap-3">
+              <div className="h-px flex-1 bg-border" />
+              <span className="text-xs text-muted">ou</span>
+              <div className="h-px flex-1 bg-border" />
+            </div>
+
+            <Button
+              type="button"
+              variant="secondary"
+              size="lg"
+              loading={googleLoading}
+              onClick={handleGoogle}
+              className="w-full"
+            >
+              {!googleLoading && <GoogleIcon className="h-5 w-5" />}
+              Continuar com Google
+            </Button>
           </>
         )}
       </div>

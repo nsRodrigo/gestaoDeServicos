@@ -3,6 +3,7 @@ export type LoyaltyPeriod = 'monthly' | 'quarterly' | 'semiannual' | 'annual'
 export type UserRole = 'user' | 'admin'
 export type AccountStatus = 'pending' | 'active' | 'blocked'
 export type AppTheme = 'dark' | 'light' | 'a11y'
+export type AppointmentKind = 'atendimento' | 'venda'
 
 export interface ServiceRow {
   id: string
@@ -56,11 +57,13 @@ export interface PaymentMethodRow {
 export interface AppointmentRow {
   id: string
   user_id: string
+  type: AppointmentKind
   client_id: string | null
   client_name: string | null
   notes: string | null
   appointment_date: string
   appointment_time: string
+  duration_minutes: number
   appointment_number: number
   payment_method_id: string | null
   payment_method_name_snapshot: string | null
@@ -128,6 +131,24 @@ export interface LoyaltyAlert {
   visits: number
   required: number
   period: LoyaltyPeriod
+}
+
+export interface LowStockAlert {
+  product_id: string
+  title: string
+  message: string
+}
+
+export interface NotificationRow {
+  id: string
+  user_id: string
+  type: 'low_stock'
+  title: string
+  message: string
+  product_id: string | null
+  appointment_id: string | null
+  read_at: string | null
+  created_at: string
 }
 
 export interface PeriodSummary {

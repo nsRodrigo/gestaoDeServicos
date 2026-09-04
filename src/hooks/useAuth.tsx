@@ -11,6 +11,7 @@ interface AuthContextValue {
   displayName: string
   locked: boolean
   signIn: (email: string, password: string, remember?: boolean) => Promise<{ error: string | null }>
+  signInWithGoogle: (remember?: boolean) => Promise<{ error: string | null }>
   signUp: (email: string, password: string, name: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
   resetPassword: (email: string) => Promise<{ error: string | null }>
@@ -18,6 +19,12 @@ interface AuthContextValue {
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
+
+// Evita contas duplicadas/travadas por espaço ou maiúscula digitados sem querer:
+// o e-mail que confirma o cadastro precisa ser o mesmo, byte a byte, que o do login.
+function normalizeEmail(email: string) {
+  return email.trim().toLowerCase()
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
@@ -81,19 +88,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function signIn(email: string, password: string, remember = true) {
     setRememberMe(remember)
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    const { error } = await supabase.auth.signInWithPassword({ email: normalizeEmail(email), password })
     if (error) {
-      if (error.message.toLowerCase().includes('invalid login credentials')) {
+      const message = error.message.toLowerCase()
+      if (message.includes('invalid login credentials')) {
         return { error: 'E-mail ou senha incorretos.' }
+      }
+      if (message.includes('email not confirmed')) {
+        return { error: 'E-mail ainda não confirmado. Verifique sua caixa de entrada ou peça para o administrador liberar seu acesso.' }
       }
       return { error: 'Não foi possível entrar. Tente novamente.' }
     }
     return { error: null }
   }
 
+  async function signInWithGoogle(remember = true) {
+    setRememberMe(remember)
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: `${window.location.origin}/login` },
+    })
+    if (error) {
+      return { error: 'Não foi possível entrar com o Google. Tente novamente.' }
+    }
+    return { error: null }
+  }
+
   async function signUp(email: string, password: string, name: string) {
     const { error } = await supabase.auth.signUp({
-      email,
+      email: normalizeEmail(email),
       password,
       options: { data: { name } },
     })
@@ -117,7 +140,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function resetPassword(email: string) {
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    const { error } = await supabase.auth.resetPasswordForEmail(normalizeEmail(email), {
       redirectTo: `${window.location.origin}/login`,
     })
     if (error) {
@@ -140,6 +163,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         displayName,
         locked,
         signIn,
+        signInWithGoogle,
         signUp,
         signOut,
         resetPassword,

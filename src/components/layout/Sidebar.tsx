@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useBusinessName, useProfile } from '@/hooks/useProfile'
 import { useActingAsContext } from '@/hooks/useActingAs'
 import { BusinessLogo } from '@/components/BusinessLogo'
+import { NotificationBell } from '@/components/NotificationBell'
 import { cn } from '@/lib/utils'
 
 const items = [
@@ -35,18 +36,24 @@ export function Sidebar() {
     <aside className="hidden w-64 shrink-0 flex-col border-r border-border bg-surface md:flex">
       <div className="flex items-center gap-2 px-6 py-6">
         <BusinessLogo className="h-6 w-6" />
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold leading-tight">{businessName}</p>
           {isAdmin && actingAs && (
             <p className="truncate text-xs leading-tight text-gold">Visualizando como admin</p>
           )}
         </div>
+        <NotificationBell />
       </div>
 
-      <div className="px-4">
+      <div className="flex flex-col gap-2 px-4">
         <NavLink to="/atendimentos/novo">
           <button className="flex w-full items-center justify-center gap-2 rounded-lg bg-gold px-4 py-3 text-sm font-semibold text-black hover:bg-gold-light">
             <Plus className="h-4 w-4" /> Novo atendimento
+          </button>
+        </NavLink>
+        <NavLink to="/vendas/novo">
+          <button className="flex w-full items-center justify-center gap-2 rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground hover:bg-surface-hover">
+            <ShoppingBag className="h-4 w-4" /> Nova venda
           </button>
         </NavLink>
       </div>

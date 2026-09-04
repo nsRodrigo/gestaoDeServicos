@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Trash2, AlertTriangle, Pencil, X, Mail } from 'lucide-react'
+import { AlertTriangle, Mail } from 'lucide-react'
 import { useActiveServices } from '@/hooks/useServices'
 import { useActiveProducts } from '@/hooks/useProducts'
 import { useActiveClients } from '@/hooks/useClients'
@@ -9,31 +9,19 @@ import { useAppointmentMutations, useNextAppointmentNumber, type AppointmentForm
 import type { AppointmentWithItems } from '@/types/database'
 import { Input, Textarea } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
-import { QuantitySelector } from '@/components/ui/QuantitySelector'
-import { CurrencyInput } from '@/components/ui/CurrencyInput'
 import { Combobox, type ComboboxOption } from '@/components/ui/Combobox'
 import { Select } from '@/components/ui/Select'
-import { Badge } from '@/components/ui/Badge'
 import { useToast } from '@/components/ui/Toast'
 import { formatCurrency, todayISO, nowTimeHHMM } from '@/lib/format'
-
-interface CartItem {
-  id: string
-  name: string
-  /** Effective price used for the total: customPrice when set, catalog price otherwise. */
-  price: number
-  customPrice: number | null
-  quantity: number
-  stockControl?: boolean
-  stockQuantity?: number
-  lineId?: string
-}
+import { CartEditor, type CartItem } from '@/components/appointments/CartEditor'
 
 interface AppointmentFormProps {
   mode: 'create' | 'edit'
   appointmentId?: string
   initialData?: AppointmentWithItems
 }
+
+const durationOptions = [15, 30, 45, 60, 90, 120].map((m) => ({ value: String(m), label: `${m} min` }))
 
 const loyaltyPeriodLabels: Record<string, string> = {
   monthly: 'mês',
@@ -59,6 +47,10 @@ export default function AppointmentForm({ mode, appointmentId, initialData }: Ap
   const { data: nextNumber } = useNextAppointmentNumber()
   const { create, update } = useAppointmentMutations()
 
+  // Tipo é decidido na criação (NewAppointment vs NewSale) e é imutável depois — ao editar, só
+  // olhamos o que já está salvo pra saber se escondemos serviço/data/hora.
+  const isSale = mode === 'edit' && initialData?.type === 'venda'
+
   const [clientId, setClientId] = useState<string | null>(initialData?.client_id ?? null)
   const [clientName, setClientName] = useState(initialData?.client_name ?? '')
   const [clientNote, setClientNote] = useState('')
@@ -66,6 +58,7 @@ export default function AppointmentForm({ mode, appointmentId, initialData }: Ap
   const [notes, setNotes] = useState(initialData?.notes ?? '')
   const [date, setDate] = useState(initialData?.appointment_date ?? todayISO())
   const [time, setTime] = useState(initialData?.appointment_time.slice(0, 5) ?? nowTimeHHMM())
+  const [durationMinutes, setDurationMinutes] = useState(String(initialData?.duration_minutes ?? 30))
 
   const [cartServices, setCartServices] = useState<CartItem[]>(
     initialData?.appointment_services.map((s) => ({
@@ -87,7 +80,6 @@ export default function AppointmentForm({ mode, appointmentId, initialData }: Ap
       quantity: p.quantity,
     })) ?? [],
   )
-  const [editingPriceKey, setEditingPriceKey] = useState<string | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
 
   const selectedClient = clients?.find((c) => c.id === clientId) ?? null
@@ -95,46 +87,6 @@ export default function AppointmentForm({ mode, appointmentId, initialData }: Ap
   const servicesTotal = useMemo(() => cartServices.reduce((sum, i) => sum + i.price * i.quantity, 0), [cartServices])
   const productsTotal = useMemo(() => cartProducts.reduce((sum, i) => sum + i.price * i.quantity, 0), [cartProducts])
   const grandTotal = servicesTotal + productsTotal
-
-  function addService(option: ComboboxOption) {
-    const svc = services?.find((s) => s.id === option.value)
-    if (!svc) return
-    setCartServices((prev) => {
-      const existing = prev.find((i) => i.id === svc.id)
-      if (existing) return prev.map((i) => (i.id === svc.id ? { ...i, quantity: i.quantity + 1 } : i))
-      return [...prev, { id: svc.id, name: svc.name, price: svc.price, customPrice: null, quantity: 1 }]
-    })
-  }
-
-  function addProduct(option: ComboboxOption) {
-    const prod = products?.find((p) => p.id === option.value)
-    if (!prod) return
-    setCartProducts((prev) => {
-      const existing = prev.find((i) => i.id === prod.id)
-      if (existing) return prev.map((i) => (i.id === prod.id ? { ...i, quantity: i.quantity + 1 } : i))
-      return [
-        ...prev,
-        { id: prod.id, name: prod.name, price: prod.price, customPrice: null, quantity: 1, stockControl: prod.stock_control, stockQuantity: prod.stock_quantity },
-      ]
-    })
-  }
-
-  function applyCustomPrice(kind: 'service' | 'product', id: string, value: number) {
-    const setter = kind === 'service' ? setCartServices : setCartProducts
-    setter((prev) => prev.map((i) => (i.id === id ? { ...i, customPrice: value, price: value } : i)))
-  }
-
-  function resetCustomPrice(kind: 'service' | 'product', id: string) {
-    const catalog = kind === 'service' ? services : products
-    const setter = kind === 'service' ? setCartServices : setCartProducts
-    setter((prev) =>
-      prev.map((i) => {
-        if (i.id !== id) return i
-        const catalogPrice = catalog?.find((c) => c.id === id)?.price ?? i.price
-        return { ...i, customPrice: null, price: catalogPrice }
-      }),
-    )
-  }
 
   const saving = create.isPending || update.isPending
 
@@ -165,10 +117,18 @@ export default function AppointmentForm({ mode, appointmentId, initialData }: Ap
     window.location.href = `mailto:${selectedClient.email}?subject=${subject}&body=${body}`
   }
 
+  function showLowStockToasts(alerts: { title: string; message: string }[]) {
+    alerts.forEach((n) => toast.show(n.title, { variant: 'warning', description: n.message }))
+  }
+
   async function handleSave() {
     setFormError(null)
-    if (cartServices.length === 0) {
+    if (!isSale && cartServices.length === 0) {
       setFormError('Informe pelo menos um serviço.')
+      return
+    }
+    if (isSale && cartProducts.length === 0) {
+      setFormError('Informe pelo menos um produto.')
       return
     }
     if (!paymentMethodId) {
@@ -177,12 +137,14 @@ export default function AppointmentForm({ mode, appointmentId, initialData }: Ap
     }
 
     const input: AppointmentFormInput = {
+      type: isSale ? 'venda' : 'atendimento',
       clientId,
       clientName,
       paymentMethodId,
       notes,
       date,
       time: `${time}:00`,
+      durationMinutes: Number(durationMinutes),
       services: cartServices.map((s) => ({ id: s.id, quantity: s.quantity, lineId: s.lineId, customPrice: s.customPrice })),
       products: cartProducts.map((p) => ({ id: p.id, quantity: p.quantity, lineId: p.lineId, customPrice: p.customPrice })),
     }
@@ -198,10 +160,12 @@ export default function AppointmentForm({ mode, appointmentId, initialData }: Ap
             description: `${result.loyalty.client_name} completou ${result.loyalty.visits} visitas neste ${periodLabel}.`,
           })
         }
+        showLowStockToasts(result.low_stock)
         navigate('/')
       } else if (appointmentId) {
-        await update.mutateAsync({ id: appointmentId, input })
+        const result = await update.mutateAsync({ id: appointmentId, input })
         toast.success('Atendimento atualizado com sucesso!')
+        showLowStockToasts(result.low_stock)
         navigate('/atendimentos')
       }
     } catch (err) {
@@ -209,86 +173,14 @@ export default function AppointmentForm({ mode, appointmentId, initialData }: Ap
     }
   }
 
-  const availableServices = (services ?? []).filter((s) => !cartServices.some((c) => c.id === s.id))
-  const availableProducts = (products ?? []).filter((p) => !cartProducts.some((c) => c.id === p.id))
-
   const clientOptions: ComboboxOption[] = (clients ?? []).map((c) => ({
     value: c.id,
     label: c.name,
     sublabel: c.phone ?? undefined,
   }))
-  const serviceOptions: ComboboxOption[] = availableServices.map((s) => ({
-    value: s.id,
-    label: s.name,
-    sublabel: formatCurrency(s.price),
-  }))
-  const productOptions: ComboboxOption[] = availableProducts.map((p) => ({
-    value: p.id,
-    label: p.name,
-    sublabel: p.stock_control && p.stock_quantity <= 0 ? 'Sem estoque' : formatCurrency(p.price),
-    disabled: p.stock_control && p.stock_quantity <= 0,
-  }))
 
   const paymentOptions = (paymentMethods ?? []).map((m) => ({ value: m.id, label: m.name }))
-  const canSave = cartServices.length > 0 && !!paymentMethodId
-
-  function renderCartItem(item: CartItem, kind: 'service' | 'product') {
-    const key = `${kind}:${item.id}`
-    const isEditingPrice = editingPriceKey === key
-    const setQuantity = (q: number) => {
-      const setter = kind === 'service' ? setCartServices : setCartProducts
-      setter((prev) => prev.map((i) => (i.id === item.id ? { ...i, quantity: q } : i)))
-    }
-    const removeItem = () => {
-      const setter = kind === 'service' ? setCartServices : setCartProducts
-      setter((prev) => prev.filter((i) => i.id !== item.id))
-    }
-
-    return (
-      <div key={item.id} className="flex flex-col gap-2 rounded-xl border border-border bg-surface p-3">
-        <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium text-foreground">{item.name}</p>
-            {isEditingPrice ? (
-              <div className="mt-1 flex items-center gap-2">
-                <CurrencyInput
-                  value={item.price}
-                  onChange={(v) => applyCustomPrice(kind, item.id, v)}
-                  className="h-9"
-                />
-                <button type="button" onClick={() => setEditingPriceKey(null)} className="text-xs text-gold">
-                  OK
-                </button>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setEditingPriceKey(key)}
-                className="mt-0.5 flex items-center gap-1 text-xs text-muted hover:text-gold"
-              >
-                {formatCurrency(item.price)}
-                <Pencil className="h-3 w-3" />
-                {item.customPrice !== null && <Badge variant="gold">Personalizado</Badge>}
-              </button>
-            )}
-            {item.customPrice !== null && !isEditingPrice && (
-              <button
-                type="button"
-                onClick={() => resetCustomPrice(kind, item.id)}
-                className="mt-0.5 flex items-center gap-1 text-xs text-muted hover:text-foreground"
-              >
-                <X className="h-3 w-3" /> usar valor cadastrado
-              </button>
-            )}
-          </div>
-          <QuantitySelector value={item.quantity} onChange={setQuantity} />
-          <button type="button" aria-label="Remover" onClick={removeItem} className="text-muted hover:text-danger">
-            <Trash2 className="h-4 w-4" />
-          </button>
-        </div>
-      </div>
-    )
-  }
+  const canSave = (isSale ? cartProducts.length > 0 : cartServices.length > 0) && !!paymentMethodId
 
   return (
     <div className="flex flex-col gap-6 pb-32 md:pb-6">
@@ -303,10 +195,13 @@ export default function AppointmentForm({ mode, appointmentId, initialData }: Ap
           options={clientOptions}
           emptyText="Nenhum cliente cadastrado ainda. Digite um nome pra usar mesmo assim."
         />
-        <div className="grid grid-cols-2 gap-4">
-          <Input label="Data" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-          <Input label="Horário" type="time" value={time} onChange={(e) => setTime(e.target.value)} />
-        </div>
+        {!isSale && (
+          <div className="grid grid-cols-3 gap-4">
+            <Input label="Data" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+            <Input label="Horário" type="time" value={time} onChange={(e) => setTime(e.target.value)} />
+            <Select label="Duração" value={durationMinutes} onChange={setDurationMinutes} options={durationOptions} />
+          </div>
+        )}
       </div>
 
       {selectedClient?.email && (
@@ -325,31 +220,29 @@ export default function AppointmentForm({ mode, appointmentId, initialData }: Ap
         </section>
       )}
 
-      <section>
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted">Serviços</h2>
-        <div className="flex flex-col gap-2">{cartServices.map((item) => renderCartItem(item, 'service'))}</div>
-        <Combobox
-          className="mt-3"
-          placeholder={loadingServices ? 'Carregando...' : 'Adicionar serviço'}
-          value=""
-          onSelect={addService}
-          options={serviceOptions}
+      {!isSale && (
+        <CartEditor
+          items={cartServices}
+          onChange={setCartServices}
+          catalog={services}
+          loading={loadingServices}
+          sectionLabel="Serviços"
+          addPlaceholder="Adicionar serviço"
           emptyText="Nenhum serviço disponível. Cadastre em Tipos de Corte."
+          namespace="service"
         />
-      </section>
+      )}
 
-      <section>
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted">Extras</h2>
-        <div className="flex flex-col gap-2">{cartProducts.map((item) => renderCartItem(item, 'product'))}</div>
-        <Combobox
-          className="mt-3"
-          placeholder={loadingProducts ? 'Carregando...' : 'Adicionar extra'}
-          value=""
-          onSelect={addProduct}
-          options={productOptions}
-          emptyText="Nenhum produto disponível. Cadastre em Produtos/Extras."
-        />
-      </section>
+      <CartEditor
+        items={cartProducts}
+        onChange={setCartProducts}
+        catalog={products}
+        loading={loadingProducts}
+        sectionLabel="Extras"
+        addPlaceholder="Adicionar extra"
+        emptyText="Nenhum produto disponível. Cadastre em Produtos/Extras."
+        namespace="product"
+      />
 
       <Select
         label="Forma de pagamento"
@@ -376,8 +269,14 @@ export default function AppointmentForm({ mode, appointmentId, initialData }: Ap
       <div className="fixed inset-x-0 bottom-16 z-30 border-t border-border bg-surface p-4 md:static md:rounded-xl md:border md:bottom-auto">
         <div className="mx-auto flex max-w-6xl flex-col gap-1.5 md:flex-row md:items-center md:justify-between">
           <div className="flex justify-between text-sm text-muted md:gap-6">
-            <span>Total serviços: <strong className="text-foreground">{formatCurrency(servicesTotal)}</strong></span>
-            <span>Total extras: <strong className="text-foreground">{formatCurrency(productsTotal)}</strong></span>
+            {!isSale && (
+              <span>
+                Total serviços: <strong className="text-foreground">{formatCurrency(servicesTotal)}</strong>
+              </span>
+            )}
+            <span>
+              Total extras: <strong className="text-foreground">{formatCurrency(productsTotal)}</strong>
+            </span>
           </div>
           <div className="mt-2 flex items-center justify-between md:mt-0 md:gap-4">
             <span className="text-base font-semibold">

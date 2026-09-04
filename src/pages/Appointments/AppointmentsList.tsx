@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Eye, Pencil, Trash2, CalendarClock, Plus } from 'lucide-react'
+import { Eye, Pencil, Trash2, CalendarClock, Plus, ShoppingBag } from 'lucide-react'
 import { useAppointmentsByPeriod, useAppointmentMutations } from '@/hooks/useAppointments'
 import { resolvePeriod, type PeriodPreset } from '@/lib/periods'
 import { formatCurrency, formatDateBR, formatTimeBR, todayISO, appointmentLabel } from '@/lib/format'
@@ -12,7 +12,16 @@ import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { ConfirmationDialog } from '@/components/ui/ConfirmationDialog'
 import { TableContainer, Table, Thead, Th, Tr, Td } from '@/components/ui/Table'
+import { Badge } from '@/components/ui/Badge'
 import { useToast } from '@/components/ui/Toast'
+
+function TypeBadge({ appt }: { appt: AppointmentWithItems }) {
+  return appt.type === 'venda' ? (
+    <Badge variant="gold">Venda</Badge>
+  ) : (
+    <Badge variant="neutral">Atendimento</Badge>
+  )
+}
 
 function itemsSummary(appt: AppointmentWithItems) {
   const services = appt.appointment_services.map((s) => s.service_name_snapshot).join(' + ')
@@ -66,9 +75,14 @@ export default function AppointmentsList() {
           title="Nenhum atendimento neste período."
           description="Registre um novo atendimento para começar."
           action={
-            <Button onClick={() => navigate('/atendimentos/novo')}>
-              <Plus className="h-4 w-4" /> Registrar atendimento
-            </Button>
+            <div className="flex flex-wrap justify-center gap-2">
+              <Button onClick={() => navigate('/atendimentos/novo')}>
+                <Plus className="h-4 w-4" /> Registrar atendimento
+              </Button>
+              <Button variant="secondary" onClick={() => navigate('/vendas/novo')}>
+                <ShoppingBag className="h-4 w-4" /> Nova venda
+              </Button>
+            </div>
           }
         />
       ) : (
@@ -81,9 +95,13 @@ export default function AppointmentsList() {
                 <div key={appt.id} className="rounded-xl border border-border bg-surface p-4">
                   <div className="flex items-start justify-between">
                     <div className="min-w-0">
-                      <p className="text-sm font-semibold text-foreground">
-                        {formatTimeBR(appt.appointment_time)} · {appointmentLabel(appt)}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-semibold text-foreground">
+                          {formatTimeBR(appt.appointment_time)}
+                          {appt.type === 'atendimento' && ` · ${appt.duration_minutes} min`} · {appointmentLabel(appt)}
+                        </p>
+                        <TypeBadge appt={appt} />
+                      </div>
                       <p className="mt-1 truncate text-sm text-muted">{services}</p>
                       {products && <p className="truncate text-xs text-muted">{products}</p>}
                       {appt.payment_method_name_snapshot && (
@@ -115,6 +133,7 @@ export default function AppointmentsList() {
                 <Tr>
                   <Th>Data</Th>
                   <Th>Horário</Th>
+                  <Th>Tipo</Th>
                   <Th>Cliente</Th>
                   <Th>Serviços</Th>
                   <Th>Extras</Th>
@@ -129,7 +148,8 @@ export default function AppointmentsList() {
                   return (
                     <Tr key={appt.id}>
                       <Td>{formatDateBR(appt.appointment_date)}</Td>
-                      <Td>{formatTimeBR(appt.appointment_time)}</Td>
+                      <Td>{formatTimeBR(appt.appointment_time)}{appt.type === 'atendimento' && ` · ${appt.duration_minutes} min`}</Td>
+                      <Td><TypeBadge appt={appt} /></Td>
                       <Td>{appointmentLabel(appt)}</Td>
                       <Td className="max-w-[220px] truncate">{services}</Td>
                       <Td className="max-w-[180px] truncate">{products || '—'}</Td>
@@ -161,18 +181,25 @@ export default function AppointmentsList() {
         {viewing && (
           <div className="flex flex-col gap-4 text-sm">
             <div className="flex justify-between text-muted">
-              <span>{formatDateBR(viewing.appointment_date)} às {formatTimeBR(viewing.appointment_time)}</span>
-              <span>{appointmentLabel(viewing)}</span>
+              <span>
+                {formatDateBR(viewing.appointment_date)} às {formatTimeBR(viewing.appointment_time)}
+                {viewing.type === 'atendimento' && ` · ${viewing.duration_minutes} min`}
+              </span>
+              <span className="flex items-center gap-2">
+                {appointmentLabel(viewing)} <TypeBadge appt={viewing} />
+              </span>
             </div>
-            <div>
-              <p className="mb-1 font-medium text-muted">Serviços</p>
-              {viewing.appointment_services.map((s) => (
-                <div key={s.id} className="flex justify-between py-0.5">
-                  <span>{s.service_name_snapshot} x{s.quantity}</span>
-                  <span>{formatCurrency(s.subtotal)}</span>
-                </div>
-              ))}
-            </div>
+            {viewing.type === 'atendimento' && (
+              <div>
+                <p className="mb-1 font-medium text-muted">Serviços</p>
+                {viewing.appointment_services.map((s) => (
+                  <div key={s.id} className="flex justify-between py-0.5">
+                    <span>{s.service_name_snapshot} x{s.quantity}</span>
+                    <span>{formatCurrency(s.subtotal)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
             {viewing.appointment_products.length > 0 && (
               <div>
                 <p className="mb-1 font-medium text-muted">Extras</p>

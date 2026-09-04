@@ -1,9 +1,9 @@
 import { createContext, useCallback, useContext, useState, type ReactNode } from 'react'
 import * as RadixToast from '@radix-ui/react-toast'
-import { CheckCircle2, XCircle, Info, X } from 'lucide-react'
+import { CheckCircle2, XCircle, Info, AlertTriangle, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-type ToastVariant = 'success' | 'error' | 'info'
+type ToastVariant = 'success' | 'error' | 'info' | 'warning'
 
 interface ToastItem {
   id: number
@@ -24,6 +24,7 @@ const icons: Record<ToastVariant, ReactNode> = {
   success: <CheckCircle2 className="h-5 w-5 text-success shrink-0" />,
   error: <XCircle className="h-5 w-5 text-danger shrink-0" />,
   info: <Info className="h-5 w-5 text-gold shrink-0" />,
+  warning: <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0" />,
 }
 
 export function ToastProvider({ children }: { children: ReactNode }) {

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, CalendarClock, Scissors } from 'lucide-react'
+import { Plus, CalendarClock, Scissors, ShoppingBag } from 'lucide-react'
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 import { useAuth } from '@/hooks/useAuth'
 import { usePeriodSummary } from '@/hooks/useReports'
@@ -70,6 +70,9 @@ export default function Dashboard() {
           <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-auto" />
           <Button onClick={() => navigate('/atendimentos/novo')} className="hidden md:inline-flex">
             <Plus className="h-4 w-4" /> Novo atendimento
+          </Button>
+          <Button variant="secondary" onClick={() => navigate('/vendas/novo')} className="hidden md:inline-flex">
+            <ShoppingBag className="h-4 w-4" /> Nova venda
           </Button>
         </div>
       </div>
@@ -173,9 +176,14 @@ export default function Dashboard() {
                 icon={CalendarClock}
                 title="Você ainda não possui atendimentos hoje."
                 action={
-                  <Button onClick={() => navigate('/atendimentos/novo')}>
-                    <Plus className="h-4 w-4" /> Registrar primeiro atendimento
-                  </Button>
+                  <div className="flex flex-wrap justify-center gap-2">
+                    <Button onClick={() => navigate('/atendimentos/novo')}>
+                      <Plus className="h-4 w-4" /> Registrar primeiro atendimento
+                    </Button>
+                    <Button variant="secondary" onClick={() => navigate('/vendas/novo')}>
+                      <ShoppingBag className="h-4 w-4" /> Nova venda
+                    </Button>
+                  </div>
                 }
               />
             ) : (
@@ -191,7 +199,9 @@ export default function Dashboard() {
                         {formatTimeBR(appt.appointment_time)} · {appointmentLabel(appt)}
                       </p>
                       <p className="truncate text-xs text-muted">
-                        {appt.appointment_services.map((s) => s.service_name_snapshot).join(' + ')}
+                        {appt.type === 'venda'
+                          ? appt.appointment_products.map((p) => `${p.product_name_snapshot} x${p.quantity}`).join(', ')
+                          : appt.appointment_services.map((s) => s.service_name_snapshot).join(' + ')}
                       </p>
                     </div>
                     <span className="shrink-0 text-sm font-semibold text-gold">{formatCurrency(appt.total_amount)}</span>

@@ -3,6 +3,7 @@ import { Printer, FileDown } from 'lucide-react'
 import { usePeriodSummary } from '@/hooks/useReports'
 import { resolveReportRange, reportKindLabels, type ReportKind } from '@/lib/reportPeriods'
 import { todayISO } from '@/lib/format'
+import type { AppointmentKind } from '@/types/database'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { LoadingState } from '@/components/ui/LoadingState'
@@ -13,15 +14,23 @@ import { cn } from '@/lib/utils'
 
 const kinds: ReportKind[] = ['daily', 'weekly', 'monthly', 'custom']
 
+type TypeFilter = 'all' | AppointmentKind
+const typeFilters: { value: TypeFilter; label: string }[] = [
+  { value: 'all', label: 'Todos' },
+  { value: 'atendimento', label: 'Atendimentos' },
+  { value: 'venda', label: 'Vendas' },
+]
+
 export default function Reports() {
   const [kind, setKind] = useState<ReportKind>('daily')
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>('all')
   const [anchorDate, setAnchorDate] = useState(todayISO())
   const [anchorMonth, setAnchorMonth] = useState(todayISO().slice(0, 7))
   const [customStart, setCustomStart] = useState(todayISO())
   const [customEnd, setCustomEnd] = useState(todayISO())
 
   const { start, end, title } = resolveReportRange(kind, anchorDate, anchorMonth, customStart, customEnd)
-  const { data: summary, isLoading, isError } = usePeriodSummary(start, end)
+  const { data: summary, isLoading, isError } = usePeriodSummary(start, end, typeFilter === 'all' ? null : typeFilter)
 
   function handlePrint() {
     window.print()
@@ -42,6 +51,21 @@ export default function Reports() {
             )}
           >
             {reportKindLabels[k]}
+          </button>
+        ))}
+      </div>
+
+      <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1">
+        {typeFilters.map((f) => (
+          <button
+            key={f.value}
+            onClick={() => setTypeFilter(f.value)}
+            className={cn(
+              'shrink-0 rounded-full border border-border px-4 py-2 text-sm font-medium text-muted',
+              typeFilter === f.value && 'border-gold bg-gold/10 text-gold',
+            )}
+          >
+            {f.label}
           </button>
         ))}
       </div>

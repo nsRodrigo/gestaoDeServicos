@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useEffectiveUser } from '@/hooks/useEffectiveUser'
-import type { AppointmentWithItems, LoyaltyAlert } from '@/types/database'
+import type { AppointmentKind, AppointmentWithItems, LoyaltyAlert, LowStockAlert } from '@/types/database'
 
 export interface AppointmentLineInput {
   id: string
@@ -13,12 +13,14 @@ export interface AppointmentLineInput {
 }
 
 export interface AppointmentFormInput {
+  type?: AppointmentKind
   clientId: string | null
   clientName: string
   paymentMethodId: string | null
   notes: string
   date: string
   time: string
+  durationMinutes: number
   services: AppointmentLineInput[]
   products: AppointmentLineInput[]
 }
@@ -27,6 +29,11 @@ export interface CreateAppointmentResult {
   id: string
   appointment_number: number
   loyalty: LoyaltyAlert | null
+  low_stock: LowStockAlert[]
+}
+
+export interface UpdateAppointmentResult {
+  low_stock: LowStockAlert[]
 }
 
 const APPOINTMENT_SELECT = '*, appointment_services(*), appointment_products(*)'
@@ -95,8 +102,10 @@ export function useNextAppointmentNumber() {
 function friendlyError(message: string) {
   if (message.includes('Estoque insuficiente')) return message
   if (message.includes('pelo menos um serviço')) return 'Informe pelo menos um serviço.'
+  if (message.includes('pelo menos um produto')) return 'Informe pelo menos um produto.'
   if (message.includes('Cliente inválido')) return 'Cliente inválido.'
   if (message.includes('Forma de pagamento inválida')) return 'Forma de pagamento inválida.'
+  if (message.includes('Já existe um atendimento nesse horário')) return message
   return 'Não foi possível salvar o atendimento.'
 }
 
@@ -111,6 +120,7 @@ export function useAppointmentMutations() {
     queryClient.invalidateQueries({ queryKey: ['reports'] })
     queryClient.invalidateQueries({ queryKey: ['products'] })
     queryClient.invalidateQueries({ queryKey: ['next-appointment-number'] })
+    queryClient.invalidateQueries({ queryKey: ['notifications'] })
   }
 
   const create = useMutation({
@@ -125,6 +135,8 @@ export function useAppointmentMutations() {
         p_services: input.services.map((s) => lineToJson(s, 'service_id')),
         p_products: input.products.map((p) => lineToJson(p, 'product_id')),
         p_target_user_id: targetUserId,
+        p_duration_minutes: input.durationMinutes,
+        p_type: input.type ?? 'atendimento',
       })
       if (error) throw new Error(friendlyError(error.message))
       return data as unknown as CreateAppointmentResult
@@ -134,7 +146,7 @@ export function useAppointmentMutations() {
 
   const update = useMutation({
     mutationFn: async ({ id, input }: { id: string; input: AppointmentFormInput }) => {
-      const { error } = await supabase.rpc('fn_update_appointment', {
+      const { data, error } = await supabase.rpc('fn_update_appointment', {
         p_appointment_id: id,
         p_client_id: input.clientId,
         p_client_name: input.clientName || null,
@@ -145,8 +157,10 @@ export function useAppointmentMutations() {
         p_services: input.services.map((s) => lineToJson(s, 'service_id')),
         p_products: input.products.map((p) => lineToJson(p, 'product_id')),
         p_target_user_id: targetUserId,
+        p_duration_minutes: input.durationMinutes,
       })
       if (error) throw new Error(friendlyError(error.message))
+      return data as unknown as UpdateAppointmentResult
     },
     onSuccess: invalidateAll,
   })

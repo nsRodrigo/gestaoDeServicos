@@ -193,24 +193,22 @@ export default function Products() {
             Controlar estoque
           </label>
 
-          {form.stockControl && (
-            <div className="grid grid-cols-2 gap-4">
-              <Input
-                label="Estoque atual"
-                type="number"
-                min={0}
-                value={form.stockQuantity}
-                onChange={(e) => setForm({ ...form, stockQuantity: Number(e.target.value) })}
-              />
-              <Input
-                label="Estoque mínimo"
-                type="number"
-                min={0}
-                value={form.minimumStock}
-                onChange={(e) => setForm({ ...form, minimumStock: Number(e.target.value) })}
-              />
-            </div>
-          )}
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              label="Estoque atual"
+              type="number"
+              min={0}
+              value={form.stockQuantity}
+              onChange={(e) => setForm({ ...form, stockQuantity: Number(e.target.value) })}
+            />
+            <Input
+              label="Estoque mínimo"
+              type="number"
+              min={0}
+              value={form.minimumStock}
+              onChange={(e) => setForm({ ...form, minimumStock: Number(e.target.value) })}
+            />
+          </div>
 
           {error && <p className="text-sm text-danger">{error}</p>}
           <Button size="lg" onClick={handleSubmit} loading={saving}>

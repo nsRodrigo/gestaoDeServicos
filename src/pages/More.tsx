@@ -1,13 +1,15 @@
 import { Link } from 'react-router-dom'
-import { Scissors, ShoppingBag, Settings, LogOut, ChevronRight, Users, Wallet, ShieldCheck, Building2 } from 'lucide-react'
+import { Scissors, ShoppingBag, Settings, LogOut, ChevronRight, Users, Wallet, ShieldCheck, Building2, Bell } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useProfile } from '@/hooks/useProfile'
 
 const items = [
+  { to: '/vendas/novo', label: 'Nova venda', icon: ShoppingBag },
   { to: '/clientes', label: 'Clientes', icon: Users },
   { to: '/tipos-de-corte', label: 'Tipos de Corte', icon: Scissors },
   { to: '/produtos-extras', label: 'Produtos / Extras', icon: ShoppingBag },
   { to: '/formas-pagamento', label: 'Formas de Pagamento', icon: Wallet },
+  { to: '/notificacoes', label: 'Notificações', icon: Bell },
   { to: '/configuracoes', label: 'Configurações', icon: Settings },
 ]
 

@@ -5,14 +5,16 @@ import { useAuth } from '@/hooks/useAuth'
 import { Input } from '@/components/ui/Input'
 import { PasswordInput } from '@/components/ui/PasswordInput'
 import { Button } from '@/components/ui/Button'
+import { GoogleIcon } from '@/components/ui/GoogleIcon'
 
 export default function Login() {
-  const { session, signIn } = useAuth()
+  const { session, signIn, signInWithGoogle } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [remember, setRemember] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [googleLoading, setGoogleLoading] = useState(false)
 
   if (session) return <Navigate to="/" replace />
 
@@ -23,6 +25,17 @@ export default function Login() {
     const { error } = await signIn(email, password, remember)
     setLoading(false)
     if (error) setError(error)
+  }
+
+  async function handleGoogle() {
+    setError(null)
+    setGoogleLoading(true)
+    const { error } = await signInWithGoogle(remember)
+    if (error) {
+      setGoogleLoading(false)
+      setError(error)
+    }
+    // Em caso de sucesso o navegador é redirecionado pro Google — não há o que fazer aqui.
   }
 
   return (
@@ -75,6 +88,24 @@ export default function Login() {
             Esqueci minha senha
           </Link>
         </form>
+
+        <div className="my-6 flex items-center gap-3">
+          <div className="h-px flex-1 bg-border" />
+          <span className="text-xs text-muted">ou</span>
+          <div className="h-px flex-1 bg-border" />
+        </div>
+
+        <Button
+          type="button"
+          variant="secondary"
+          size="lg"
+          loading={googleLoading}
+          onClick={handleGoogle}
+          className="w-full"
+        >
+          {!googleLoading && <GoogleIcon className="h-5 w-5" />}
+          Continuar com Google
+        </Button>
 
         <p className="mt-6 text-center text-sm text-muted">
           Não tem conta?{' '}

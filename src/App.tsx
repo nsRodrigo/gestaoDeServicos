@@ -11,6 +11,7 @@ import SignUp from '@/pages/SignUp'
 import ForgotPassword from '@/pages/ForgotPassword'
 import AppointmentsList from '@/pages/Appointments/AppointmentsList'
 import NewAppointment from '@/pages/Appointments/NewAppointment'
+import NewSale from '@/pages/Appointments/NewSale'
 import EditAppointment from '@/pages/Appointments/EditAppointment'
 import More from '@/pages/More'
 
@@ -21,6 +22,7 @@ const Clients = lazy(() => import('@/pages/Clients'))
 const PaymentMethods = lazy(() => import('@/pages/PaymentMethods'))
 const Reports = lazy(() => import('@/pages/Reports'))
 const Settings = lazy(() => import('@/pages/Settings'))
+const Notifications = lazy(() => import('@/pages/Notifications'))
 const Admin = lazy(() => import('@/pages/Admin'))
 const CompanySelector = lazy(() => import('@/pages/CompanySelector'))
 
@@ -52,6 +54,7 @@ export default function App() {
             <Route path="/" element={<Suspended><Dashboard /></Suspended>} />
             <Route path="/atendimentos" element={<AppointmentsList />} />
             <Route path="/atendimentos/novo" element={<NewAppointment />} />
+            <Route path="/vendas/novo" element={<NewSale />} />
             <Route path="/atendimentos/:id/editar" element={<EditAppointment />} />
             <Route path="/tipos-de-corte" element={<Suspended><Services /></Suspended>} />
             <Route path="/produtos-extras" element={<Suspended><Products /></Suspended>} />
@@ -59,6 +62,7 @@ export default function App() {
             <Route path="/formas-pagamento" element={<Suspended><PaymentMethods /></Suspended>} />
             <Route path="/relatorios" element={<Suspended><Reports /></Suspended>} />
             <Route path="/configuracoes" element={<Suspended><Settings /></Suspended>} />
+            <Route path="/notificacoes" element={<Suspended><Notifications /></Suspended>} />
             <Route path="/mais" element={<More />} />
           </Route>
         </Route>

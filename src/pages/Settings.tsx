@@ -246,6 +246,11 @@ export default function Settings() {
         </Button>
       </Card>
 
+      <Card>
+        <CardTitle>Sobre</CardTitle>
+        <p className="mt-1 text-sm text-muted">Versão {__APP_VERSION__}</p>
+      </Card>
+
       <Button variant="danger" onClick={() => signOut()} className="md:w-fit">
         <LogOut className="h-4 w-4" /> Sair
       </Button>
