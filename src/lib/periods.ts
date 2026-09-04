@@ -1,9 +1,10 @@
 import { todayISO, isoDateAddDays } from './format'
 
-export type PeriodPreset = 'today' | 'yesterday' | 'last7' | 'last30' | 'thisMonth' | 'custom'
+export type PeriodPreset = 'today' | 'upcoming' | 'yesterday' | 'last7' | 'last30' | 'thisMonth' | 'custom'
 
 export const periodLabels: Record<PeriodPreset, string> = {
   today: 'Hoje',
+  upcoming: 'Agendados',
   yesterday: 'Ontem',
   last7: 'Últimos 7 dias',
   last30: 'Últimos 30 dias',
@@ -16,6 +17,9 @@ export function resolvePeriod(preset: PeriodPreset, customStart?: string, custom
   switch (preset) {
     case 'today':
       return { start: today, end: today }
+    case 'upcoming':
+      // Janela generosa pra frente — cobre qualquer horizonte razoável de agendamento.
+      return { start: today, end: isoDateAddDays(today, 90) }
     case 'yesterday': {
       const y = isoDateAddDays(today, -1)
       return { start: y, end: y }

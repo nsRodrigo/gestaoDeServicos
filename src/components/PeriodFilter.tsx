@@ -10,7 +10,7 @@ interface PeriodFilterProps {
   onCustomChange: (start: string, end: string) => void
 }
 
-const presets: PeriodPreset[] = ['today', 'yesterday', 'last7', 'last30', 'thisMonth', 'custom']
+const presets: PeriodPreset[] = ['today', 'upcoming', 'yesterday', 'last7', 'last30', 'thisMonth', 'custom']
 
 export function PeriodFilter({ preset, onPresetChange, customStart, customEnd, onCustomChange }: PeriodFilterProps) {
   return (

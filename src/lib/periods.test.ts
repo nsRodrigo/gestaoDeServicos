@@ -16,6 +16,10 @@ describe('resolvePeriod', () => {
     expect(resolvePeriod('today')).toEqual({ start: '2026-09-02', end: '2026-09-02' })
   })
 
+  it('upcoming spans 90 days starting today', () => {
+    expect(resolvePeriod('upcoming')).toEqual({ start: '2026-09-02', end: '2026-12-01' })
+  })
+
   it('yesterday resolves to the day before', () => {
     expect(resolvePeriod('yesterday')).toEqual({ start: '2026-09-01', end: '2026-09-01' })
   })
